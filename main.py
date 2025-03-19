@@ -1,7 +1,6 @@
 # -------------------------- START IMPORTS -------------------------
 from rapidfuzz import fuzz
 
-from firebase_config import get_firestore_prefix
 from algo_config import get_ilp_alpha, get_ilp_beta, get_max_rank
 
 import pandas as pd
@@ -9,10 +8,10 @@ import os
 import pulp
 import traceback
 
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from nltk.stem.porter import PorterStemmer
+# import nltk
+# from nltk.corpus import stopwords
+# from nltk.stem import WordNetLemmatizer
+# from nltk.stem.porter import PorterStemmer
 
 import requests
 
@@ -22,8 +21,8 @@ import requests
 
 # -------------------------- START CONFIG -------------------------
 
-nltk.download("stopwords")
-nltk.download("wordnet")
+# nltk.download("stopwords")
+# nltk.download("wordnet")
 
 # Fetch Alpha parameter for the match probability
 ILP_ALPHA = get_ilp_alpha()
