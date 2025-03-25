@@ -1,9 +1,11 @@
 # -------------------------- START IMPORTS -------------------------
-from rapidfuzz import fuzz
+# from rapidfuzz import fuzz
 
+# from firebase_config import get_firestore_prefix
 from algo_config import get_ilp_alpha, get_ilp_beta, get_max_rank
 
 import pandas as pd
+import sys
 import os
 import pulp
 import traceback
@@ -18,6 +20,28 @@ import requests
 # -------------------------- END IMPORTS -------------------------
 
 
+# -------------------------- START CSV INGESTION ------------------
+
+if len(sys.argv) < 2:
+    print("Usage: python main.py <input_file.csv>")
+    sys.exit(1)
+
+file_path = sys.argv[1]
+
+try:
+    # Read CSV file into DataFrame
+    df = pd.read_csv(file_path)
+    
+    # Display basic information about the DataFrame
+    print("CSV file successfully loaded into DataFrame")
+    print(df.head())
+
+except FileNotFoundError:
+    print(f"Error: File '{file_path}' not found.")
+    sys.exit(1)
+except Exception as e:
+    print(f"An error occurred: {str(e)}")
+    sys.exit(1)
 
 # -------------------------- START CONFIG -------------------------
 
