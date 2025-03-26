@@ -5,6 +5,14 @@
 from algo_config import get_ilp_alpha, get_ilp_beta, get_max_rank, get_faculty_weight
 
 import pandas as pd
+
+# Display all rows
+pd.set_option('display.max_rows', None)
+
+# # Display all columns (optional)
+# pd.set_option('display.max_columns', None)
+
+
 import sys
 import os
 import pulp
@@ -50,8 +58,10 @@ def main():
         print(f"An error occurred: {str(e)}")
         sys.exit(1)
 
-    a, b = process_preferences(df_student, df_faculty)
-    print(a,b)
+    # a, b = process_preferences(df_student, df_faculty)
+    # print(a,b)
+    
+    print(perform_ilp_matching(df_student, df_faculty))
 
 
 # -------------------------- START CONFIG -------------------------
@@ -86,8 +96,6 @@ def calculate_probability(faculty_rank_for_student, student_rank_for_faculty):
     return max((raw_probability / max_possible) * 100, 0)
 
 
-import pandas as pd
-import pulp
 
 def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame):
     """
@@ -200,89 +208,96 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
     
     return pd.DataFrame(pairs), faculty_slots
 
-# Blind Claude paste ----
-# def perform_ilp_matching(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame):
-#     """
-#     Solves the faculty-student matching problem using two separate preference DataFrames.
+def perform_ilp_matching(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame):
+    """
+    Solves the faculty-student matching problem using two separate preference DataFrames.
     
-#     Parameters:
-#         student_prefs_df (pd.DataFrame): DataFrame containing student preferences with columns:
-#             'Full Name', 'Rank 1', 'Rank 2', etc.
-#         faculty_prefs_df (pd.DataFrame): DataFrame containing faculty preferences with columns:
-#             'Full Name', 'Project #1', 'Number of Open Slots', 'Student Rank 1', etc.
+    Parameters:
+        student_prefs_df (pd.DataFrame): DataFrame containing student preferences with columns:
+            'Full Name', 'Rank 1', 'Rank 2', etc.
+        faculty_prefs_df (pd.DataFrame): DataFrame containing faculty preferences with columns:
+            'Full Name', 'Project #1', 'Number of Open Slots', 'Student Rank 1', etc.
             
-#     Returns:
-#         pd.DataFrame: A DataFrame containing the optimal matches with columns:
-#             - 'faculty_project': Matched faculty project
-#             - 'student_name': Matched student name
-#             - 'probability_of_match': Probability of the match
-#             - 'student_rank': The rank the student gave this faculty
-#             - 'faculty_rank': The rank the faculty gave this student (-1 if not ranked)
-#     """
-#     # Process the preferences to get the input data and faculty slots
-#     input_data, faculty_slots = process_preferences(student_prefs_df, faculty_prefs_df)
+    Returns:
+        pd.DataFrame: A DataFrame containing the optimal matches with columns:
+            - 'faculty_project': Matched faculty project
+            - 'student_name': Matched student name
+            - 'probability_of_match': Probability of the match
+            - 'student_rank': The rank the student gave this faculty
+            - 'faculty_rank': The rank the faculty gave this student
+    """
     
-#     # Convert the input DataFrame to a list of dictionaries for easier access
-#     pairs = input_data.to_dict("records")
+    # Process the preferences to get the input data and faculty slots
+    input_data, faculty_slots = process_preferences(student_prefs_df, faculty_prefs_df)
+    
+    # Convert the input DataFrame to a list of dictionaries for easier access
+    pairs = input_data.to_dict("records")
 
-#     # Initialize the ILP problem to maximize the objective
-#     problem = pulp.LpProblem("Faculty_Student_Matching", pulp.LpMaximize)
+    # Initialize the ILP problem to maximize the objective
+    problem = pulp.LpProblem("Faculty_Student_Matching", pulp.LpMaximize)
 
-#     # Define binary decision variables for each faculty-student pair
-#     x = pulp.LpVariable.dicts("match", (range(len(pairs))), cat="Binary")
+    # Define binary decision variables for each faculty-student pair
+    x = pulp.LpVariable.dicts("match", (range(len(pairs))), cat="Binary")
 
-#     # Objective function: Maximize the weighted sum of probabilities of assigned matches
-#     problem += pulp.lpSum(
-#         [pairs[i]["probability_of_match"] * x[i] for i in range(len(pairs))]
-#     )
+    # Objective function: Maximize the weighted sum of probabilities of assigned matches
+    problem += pulp.lpSum(
+        [pairs[i]["probability_of_match"] * x[i] for i in range(len(pairs))]
+    )
 
-#     # Constraints: Each student can be matched with at most one faculty project
-#     for student in input_data["student_name"].unique():
-#         problem += (
-#             pulp.lpSum(
-#                 [
-#                     x[i]
-#                     for i in range(len(pairs))
-#                     if pairs[i]["student_name"] == student
-#                 ]
-#             )
-#             <= 1,
-#             f"Student_Assignment_{student}",
-#         )
+    # Constraints: Each student can be matched with at most one faculty project
+    for student in input_data["student_name"].unique():
+        problem += (
+            pulp.lpSum(
+                [
+                    x[i]
+                    for i in range(len(pairs))
+                    if pairs[i]["student_name"] == student
+                ]
+            )
+            <= 1,
+            f"Student_Assignment_{student}",
+        )
 
-#     # Constraints: Each faculty project can be matched with up to their number of openings
-#     for faculty_project, num_openings in faculty_slots.items():
-#         problem += (
-#             pulp.lpSum(
-#                 [
-#                     x[i]
-#                     for i in range(len(pairs))
-#                     if pairs[i]["faculty_project"] == faculty_project
-#                 ]
-#             )
-#             <= num_openings,
-#             f"Faculty_Openings_{faculty_project}",
-#         )
+    # Constraints: Each faculty project can be matched with up to their number of openings
+    for faculty_project, num_openings in faculty_slots.items():
+        problem += (
+            pulp.lpSum(
+                [
+                    x[i]
+                    for i in range(len(pairs))
+                    if pairs[i]["faculty_project"] == faculty_project
+                ]
+            )
+            <= num_openings,
+            f"Faculty_Openings_{faculty_project}",
+        )
 
-#     # Solve the ILP problem
-#     problem.solve()
+    # Solve the ILP problem
+    problem.solve()
 
-#     # Extract the matches from the solution
-#     final_matching = [
-#         {
-#             "faculty_project": pairs[i]["faculty_project"],
-#             "student_name": pairs[i]["student_name"],
-#             "probability_of_match": pairs[i]["probability_of_match"],
-#             "student_rank": pairs[i]["student_rank"],
-#             "faculty_rank": pairs[i]["faculty_rank"]
-#         }
-#         for i in range(len(pairs))
-#         if pulp.value(x[i]) == 1
-#     ]
+    # Check if an optimal solution was found
+    if pulp.LpStatus[problem.status] != "Optimal":
+        print(f"Warning: No optimal solution found. Status: {pulp.LpStatus[problem.status]}")
+        return pd.DataFrame()  # Return empty DataFrame if no solution
 
-#     # Return the final matching as a DataFrame
-#     return pd.DataFrame(final_matching)
-# ----
+    # Extract the matches from the solution
+    final_matching = [
+        {
+            "faculty_project": pairs[i]["faculty_project"],
+            "student_name": pairs[i]["student_name"],
+            "probability_of_match": pairs[i]["probability_of_match"],
+            "student_rank": pairs[i]["student_rank"],
+            "faculty_rank": pairs[i]["faculty_rank"],
+            "original_project_name": pairs[i]["original_project_name"],
+            "faculty_name": pairs[i]["faculty_name"]
+        }
+        for i in range(len(pairs))
+        if pulp.value(x[i]) == 1
+    ]
+
+    # Return the final matching as a DataFrame
+    return pd.DataFrame(final_matching)
+
 
 # Old perform_ilp_matching
 # def perform_ilp_matching(input_data: pd.DataFrame, faculty_prefs: dict) -> pd.DataFrame:
