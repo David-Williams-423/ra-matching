@@ -58,10 +58,16 @@ def main():
         print(f"An error occurred: {str(e)}")
         sys.exit(1)
 
-    # a, b = process_preferences(df_student, df_faculty)
-    # print(a,b)
-    
-    print(perform_ilp_matching(df_student, df_faculty))
+    input_data, faculty_slots = process_preferences(df_student, df_faculty)
+
+    input_data, mandatory_matches, faculty_slots = assign_mandatory_matches(input_data, faculty_slots)
+
+    ilp_matches = perform_ilp_matching(input_data, faculty_slots)
+
+    combined_matches = pd.concat([mandatory_matches, ilp_matches], ignore_index=True)
+    combined_matches = combined_matches.sort_values('probability_of_match', ascending=False)
+
+    print(combined_matches)
 
 
 # -------------------------- START CONFIG -------------------------
@@ -208,7 +214,68 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
     
     return pd.DataFrame(pairs), faculty_slots
 
-def perform_ilp_matching(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame):
+def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict):
+    """
+    Identify and assign mandatory matches where both student and faculty 
+    have each other as their first choice.
+    
+    Parameters:
+    input_data (pd.DataFrame): DataFrame containing all possible student-faculty pairings
+    faculty_slots (dict): Dictionary mapping faculty projects to number of open slots
+    
+    Returns:
+    tuple: 
+        - Modified input_data (DataFrame) with mandatory matches removed
+        - Mandatory matches (DataFrame)
+        - Updated faculty_slots dictionary
+    """
+    # Create a copy of faculty_slots to avoid modifying the original
+    updated_faculty_slots = faculty_slots.copy()
+    
+    # Group the input data by student and faculty project
+    grouped = input_data.groupby(['student_name', 'faculty_project'])
+    
+    # Find mandatory matches (where both student and faculty rank each other #1)
+    mandatory_matches = []
+    remaining_pairs = input_data.copy()
+    
+    # Iterate through unique student-faculty project combinations
+    for (student, faculty_project), group in grouped:
+        # Check if this is a mandatory match
+        match_row = group.iloc[0]
+        
+        # Conditions for a mandatory match:
+        # 1. Student rank is 1 (first choice)
+        # 2. Faculty rank is 1 (first choice)
+        if (match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1):
+            # Verify there are still slots available for this project
+            if updated_faculty_slots.get(faculty_project, 0) > 0:
+                # Add to mandatory matches
+                mandatory_matches.append({
+                    'faculty_project': faculty_project,
+                    'student_name': student,
+                    'probability_of_match': match_row['probability_of_match'],
+                    'student_rank': match_row['student_rank'],
+                    'faculty_rank': match_row['faculty_rank'],
+                    'original_project_name': match_row['original_project_name'],
+                    'faculty_name': match_row['faculty_name']
+                })
+                
+                # Reduce available slots for this project
+                updated_faculty_slots[faculty_project] -= 1
+                
+                # Remove this match from remaining pairs
+                remaining_pairs = remaining_pairs[
+                    ~((remaining_pairs['student_name'] == student) | 
+                      (remaining_pairs['faculty_project'] == faculty_project))
+                ]
+    
+    # Convert mandatory matches to DataFrame
+    mandatory_matches_df = pd.DataFrame(mandatory_matches)
+    
+    return remaining_pairs, mandatory_matches_df, updated_faculty_slots
+
+def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict):
     """
     Solves the faculty-student matching problem using two separate preference DataFrames.
     
@@ -226,10 +293,7 @@ def perform_ilp_matching(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Da
             - 'student_rank': The rank the student gave this faculty
             - 'faculty_rank': The rank the faculty gave this student
     """
-    
-    # Process the preferences to get the input data and faculty slots
-    input_data, faculty_slots = process_preferences(student_prefs_df, faculty_prefs_df)
-    
+
     # Convert the input DataFrame to a list of dictionaries for easier access
     pairs = input_data.to_dict("records")
 
