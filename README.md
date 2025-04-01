@@ -95,4 +95,3 @@ python main.py students.csv faculty.csv > matches.csv
 3. **Combine Results**  
    - Mandatory matches + optimized matches
    - Sort by match probability (highest first)
-```
