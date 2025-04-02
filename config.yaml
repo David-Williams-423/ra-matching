@@ -1,0 +1,15 @@
+# Algorithm Configuration Parameters
+
+# FACULTY_WEIGHT: Weight given to faculty preferences in match calculations
+# Range: 0.0 to 1.0
+# - 0.0: Only student preferences matter
+# - 0.5: Equal weight to student and faculty preferences
+# - 1.0: Only faculty preferences matter
+faculty_weight: 0.7
+
+# PENALTY_FACTOR: Controls how much to reduce match probability when preferences are one-sided
+# Range: 0.0 to 1.0
+# - 0.0: One-sided preferences result in zero probability (most strict)
+# - 0.5: One-sided preferences have their probability reduced by half (balanced)
+# - 1.0: No penalty applied (same as original algorithm)
+penalty_factor: 0.5

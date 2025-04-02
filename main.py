@@ -1,6 +1,6 @@
 # -------------------------- START IMPORTS -------------------------
 
-from algo_config import FACULTY_WEIGHT
+from load_config import load_config
 
 import pandas as pd
 
@@ -15,16 +15,21 @@ import pulp
 
 # -------------------------- END IMPORTS -------------------------
 
-
 # -------------------------- MAIN FUNCTION ------------------
 
 def main():
+    global FACULTY_WEIGHT, PENALTY_FACTOR
+
     if len(sys.argv) < 3:
         print("Usage: python main.py <student_file.csv> <faculty_file.csv>")
         sys.exit(1)
 
     file_path_student = sys.argv[1]
     file_path_faculty = sys.argv[2]
+
+    config = load_config()
+    FACULTY_WEIGHT = config["faculty_weight"]
+    PENALTY_FACTOR = config["penalty_factor"]
 
     try:
         # Read CSV file into DataFrame
@@ -59,6 +64,8 @@ def main():
 
 # -------------------------- START CONFIG -------------------------
 
+FACULTY_WEIGHT = None
+PENALTY_FACTOR = None
 
 # -------------------------- END CONFIG -------------------------
 
@@ -73,7 +80,14 @@ def calculate_probability(student_rank, faculty_rank):
     faculty_rank_score = 1.0 - (faculty_rank - 1) * 0.15 if faculty_rank > 0 else 0
     
     # Combine scores (weighted average)
-    return (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
+    # Apply a penalty factor if either party didn't rank the other
+    if student_rank <= 0 or faculty_rank <= 0:
+        # Option 1: Use a multiplicative penalty
+        return PENALTY_FACTOR * ((faculty_rank_score * FACULTY_WEIGHT) + 
+                                (student_rank_score * (1 - FACULTY_WEIGHT)))
+    else:
+        # Normal calculation for mutual rankings
+        return (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
 
 
 def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame):
