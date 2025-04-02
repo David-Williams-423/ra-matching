@@ -49,6 +49,13 @@ class MatchingShell(cmd.Cmd):
         self.combined_matches = pd.concat([self.mandatory_matches, self.ilp_matches], ignore_index=True)
         self.combined_matches.sort_values('probability_of_match', ascending=False, inplace=True)
 
+    def do_run_matching(self, arg):
+        """Execute matching with the current configuration."""
+        print("\nRunning matching algorithm...")
+        self.process_data()
+        print(f"Generated {len(self.matches)} matches.")
+        print("Use 'show_matches' to view the results.")
+
     def do_change_weights(self, arg):
         """Adjust faculty/student preference weighting
         Usage: change_weights [0-1] (e.g., change_weights 0.5)]
@@ -63,9 +70,8 @@ class MatchingShell(cmd.Cmd):
     
         set_faculty_weight(new_weight)
         self.current_weight = new_weight
-        self.process_data() # Re-run processing with new weight
-        print(f"\nWeights update - Faculty preference weight: {self.current_weight}")
-        print(f"Recomputed {len(self.combined_matches)} matches")
+        print(f"\nWeights update - Faculty preference weight: {new_weight}")
+        print(f"Run 'run_matching' to re-run the algorithm with new weights.")
 
     def do_show_matches(self, arg):
         """Display current matches.
