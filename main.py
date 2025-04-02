@@ -18,7 +18,7 @@ import pulp
 # -------------------------- MAIN FUNCTION ------------------
 
 def main():
-    global FACULTY_WEIGHT, PENALTY_FACTOR
+    global FACULTY_WEIGHT, NO_RANK_PENALTY, LOW_RANK_PENALTY
 
     if len(sys.argv) < 3:
         print("Usage: python main.py <student_file.csv> <faculty_file.csv>")
@@ -29,7 +29,8 @@ def main():
 
     config = load_config()
     FACULTY_WEIGHT = config["faculty_weight"]
-    PENALTY_FACTOR = config["penalty_factor"]
+    LOW_RANK_PENALTY = config["low_rank_penalty"]
+    NO_RANK_PENALTY = config["no_rank_penalty"]
 
     try:
         # Read CSV file into DataFrame
@@ -65,25 +66,26 @@ def main():
 # -------------------------- START CONFIG -------------------------
 
 FACULTY_WEIGHT = None
-PENALTY_FACTOR = None
+LOW_RANK_PENALTY = None
+NO_RANK_PENALTY = None
 
 # -------------------------- END CONFIG -------------------------
 
 # ---------------------------- START PREPROCESSING FUNCTIONS ----------------
 
 # Probability calculation function for each match
-def calculate_probability(student_rank, faculty_rank):
-    # Calculate student rank score
-    student_rank_score = 1.0 - (student_rank - 1) * 0.15 if student_rank > 0 else 0
+def calculate_probability(student_rank, faculty_rank, method='normal'):
+    # Calculate student rank score    
+    student_rank_score = 1.0 - (student_rank - 1) * LOW_RANK_PENALTY if student_rank > 0 else 0
     
     # Calculate faculty rank score
-    faculty_rank_score = 1.0 - (faculty_rank - 1) * 0.15 if faculty_rank > 0 else 0
+    faculty_rank_score = 1.0 - (faculty_rank - 1) * LOW_RANK_PENALTY if faculty_rank > 0 else 0
     
     # Combine scores (weighted average)
     # Apply a penalty factor if either party didn't rank the other
     if student_rank <= 0 or faculty_rank <= 0:
         # Option 1: Use a multiplicative penalty
-        return PENALTY_FACTOR * ((faculty_rank_score * FACULTY_WEIGHT) + 
+        return NO_RANK_PENALTY * ((faculty_rank_score * FACULTY_WEIGHT) + 
                                 (student_rank_score * (1 - FACULTY_WEIGHT)))
     else:
         # Normal calculation for mutual rankings
@@ -178,16 +180,7 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
                 if ranked_student == student_name:
                     faculty_rank = i
                     break
-            
-            # Calculate student rank score
-            student_rank_score = 1.0 - (student_rank - 1) * 0.15 if student_rank > 0 else 0
-            
-            # Calculate faculty rank score
-            faculty_rank_score = 1.0 - (faculty_rank - 1) * 0.15 if faculty_rank > 0 else 0
-            
-            # Combine scores (weighted average)
-            match_probability = (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
-
+        
             match_probability = calculate_probability(student_rank, faculty_rank)
             
             # Append pair information

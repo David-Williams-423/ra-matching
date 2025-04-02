@@ -7,9 +7,18 @@
 # - 1.0: Only faculty preferences matter
 faculty_weight: 0.7
 
-# PENALTY_FACTOR: Controls how much to reduce match probability when preferences are one-sided
+# NO_RANK_PENALTY: Controls how much to reduce match probability when 
+#   only one party includes the other in their ranking
 # Range: 0.0 to 1.0
 # - 0.0: One-sided preferences result in zero probability (most strict)
 # - 0.5: One-sided preferences have their probability reduced by half (balanced)
 # - 1.0: No penalty applied (same as original algorithm)
-penalty_factor: 0.5
+no_rank_penalty: 0.5
+
+# LOW_RANK_PENALTY: Controls how much to reduce match probability when
+#    a party ranks another lower than 1
+# Range: 0.0 to 0.2
+# - 0.0: A rank of 1 is treated the same as a rank of 5
+# - 0.2: Rank of 1 given score of 1.0, rank of 2 given score of 0.8, etc.
+low_rank_penalty: 0.15
+
