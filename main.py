@@ -1,6 +1,6 @@
 # -------------------------- START IMPORTS -------------------------
 
-from algo_config import get_faculty_weight
+from algo_config import FACULTY_WEIGHT
 
 import pandas as pd
 
@@ -59,7 +59,6 @@ def main():
 
 # -------------------------- START CONFIG -------------------------
 
-FACULTY_WEIGHT = get_faculty_weight()
 
 # -------------------------- END CONFIG -------------------------
 
