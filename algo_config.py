@@ -25,17 +25,30 @@ MAX_RANK = 10
 # A value of 0.5 is neutral
 FACULTY_WEIGHT = 0.5
 
+
 def get_ilp_alpha():
+    """Get the ILP alpha value."""
     return ILP_ALPHA
 
 
 def get_ilp_beta():
+    """Get the ILP beta value."""
     return ILP_BETA
 
 
 def get_max_rank():
+    """Get the maximum rank value."""
     return MAX_RANK
 
 
 def get_faculty_weight():
+    """Get the faculty weight for matching."""
     return FACULTY_WEIGHT
+
+
+def set_faculty_weight(new_weight):
+    """Set the faculty weight for matching."""
+    global FACULTY_WEIGHT
+    if not 0 <= new_weight <= 1:
+        raise ValueError("Weight must be between 0 and 1.")
+    FACULTY_WEIGHT = new_weight

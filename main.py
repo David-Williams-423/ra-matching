@@ -1,6 +1,7 @@
 # -------------------------- START IMPORTS -------------------------
 
 from algo_config import get_faculty_weight
+from shell import MatchingShell
 
 import pandas as pd
 
@@ -19,42 +20,48 @@ import pulp
 # -------------------------- MAIN FUNCTION ------------------
 
 def main():
-    if len(sys.argv) < 3:
+    """Main function to run the RA/TA matching shell."""
+    if len(sys.argv) != 3:
         print("Usage: python main.py <student_file.csv> <faculty_file.csv>")
         sys.exit(1)
 
     file_path_student = sys.argv[1]
     file_path_faculty = sys.argv[2]
 
-    try:
-        # Read CSV file into DataFrame
-        df_student = pd.read_csv(file_path_student)
-    except FileNotFoundError:
-        print(f"Error: File '{file_path_student}' not found.")
-        sys.exit(1)
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        sys.exit(1)  
-    try:
-        # Read CSV file into DataFrame
-        df_faculty = pd.read_csv(file_path_faculty)
-    except FileNotFoundError:
-        print(f"Error: File '{file_path_faculty}' not found.")
-        sys.exit(1)
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        sys.exit(1)
+    shell = MatchingShell(file_path_faculty, file_path_student)
+    shell.cmdloop("\nRA/TA Matching Shell\n" +
+                  f"Initial faculty weight: {shell.current_weight}\n" +
+                  "Type 'help' for available commands")
 
-    input_data, faculty_slots = process_preferences(df_student, df_faculty)
+    # try:
+    #     # Read CSV file into DataFrame
+    #     df_student = pd.read_csv(file_path_student)
+    # except FileNotFoundError:
+    #     print(f"Error: File '{file_path_student}' not found.")
+    #     sys.exit(1)
+    # except Exception as e:
+    #     print(f"An error occurred: {str(e)}")
+    #     sys.exit(1)  
+    # try:
+    #     # Read CSV file into DataFrame
+    #     df_faculty = pd.read_csv(file_path_faculty)
+    # except FileNotFoundError:
+    #     print(f"Error: File '{file_path_faculty}' not found.")
+    #     sys.exit(1)
+    # except Exception as e:
+    #     print(f"An error occurred: {str(e)}")
+    #     sys.exit(1)
 
-    input_data, mandatory_matches, faculty_slots = assign_mandatory_matches(input_data, faculty_slots)
+    # input_data, faculty_slots = process_preferences(df_student, df_faculty)
 
-    ilp_matches = perform_ilp_matching(input_data, faculty_slots)
+    # input_data, mandatory_matches, faculty_slots = assign_mandatory_matches(input_data, faculty_slots)
 
-    combined_matches = pd.concat([mandatory_matches, ilp_matches], ignore_index=True)
-    combined_matches = combined_matches.sort_values('probability_of_match', ascending=False)
+    # ilp_matches = perform_ilp_matching(input_data, faculty_slots)
 
-    print(combined_matches)
+    # combined_matches = pd.concat([mandatory_matches, ilp_matches], ignore_index=True)
+    # combined_matches = combined_matches.sort_values('probability_of_match', ascending=False)
+
+    # print(combined_matches)
 
 
 # -------------------------- START CONFIG -------------------------
@@ -66,7 +73,7 @@ FACULTY_WEIGHT = get_faculty_weight()
 # ---------------------------- START PREPROCESSING FUNCTIONS ----------------
 
 # Probability calculation function for each match
-def calculate_probability(student_rank, faculty_rank):
+def calculate_probability(student_rank, faculty_rank, faculty_weight):
     # Calculate student rank score
     student_rank_score = 1.0 - (student_rank - 1) * 0.15 if student_rank > 0 else 0
     
@@ -74,10 +81,10 @@ def calculate_probability(student_rank, faculty_rank):
     faculty_rank_score = 1.0 - (faculty_rank - 1) * 0.15 if faculty_rank > 0 else 0
     
     # Combine scores (weighted average)
-    return (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
+    return (faculty_rank_score * faculty_weight) + (student_rank_score * (1 - faculty_weight))
 
 
-def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame):
+def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame, faculty_weight: float):
     """
     Process the raw preference DataFrames into a comprehensive format for ILP matching.
     
@@ -175,7 +182,7 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
             # Combine scores (weighted average)
             match_probability = (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
 
-            match_probability = calculate_probability(student_rank, faculty_rank)
+            match_probability = calculate_probability(student_rank, faculty_rank, faculty_weight)
             
             # Append pair information
             pairs.append({
