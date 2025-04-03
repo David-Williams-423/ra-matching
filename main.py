@@ -197,34 +197,65 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
     return pd.DataFrame(pairs), faculty_slots
 
 
-def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict):
+def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, previous_data: pd.DataFrame = None):
     """
     Identify and assign mandatory matches where both student and faculty 
-    have each other as their first choice.
+    have each other as their first choice, and process locked matches from previous data.
     
     Parameters:
     input_data (pd.DataFrame): DataFrame containing all possible student-faculty pairings
     faculty_slots (dict): Dictionary mapping faculty projects to number of open slots
+    previous_data (pd.DataFrame, optional): DataFrame containing previously locked matches
     
     Returns:
     tuple: 
-        - Modified input_data (DataFrame) with mandatory matches removed
-        - Mandatory matches (DataFrame)
+        - Modified input_data (DataFrame) with mandatory matches and previous matches removed
+        - Combined mandatory and previous matches (DataFrame)
         - Updated faculty_slots dictionary
     """
     # Create a copy of faculty_slots to avoid modifying the original
     updated_faculty_slots = faculty_slots.copy()
     
-    # Group the input data by student and faculty project
-    grouped = input_data.groupby(['student_name', 'faculty_project'])
-    
-    # Find mandatory matches (where both student and faculty rank each other #1)
-    mandatory_matches = []
+    # Initialize list for all locked matches
+    locked_matches = []
     remaining_pairs = input_data.copy()
+    
+    # First process previous locked matches if they exist
+    if previous_data is not None and not previous_data.empty:
+        # Filter for locked matches only
+        locked_previous = previous_data[previous_data['locked'] == True]
+        
+        for _, row in locked_previous.iterrows():
+            faculty_project = row['faculty_project']
+            student = row['student_name']
+            
+            # Add to locked matches
+            locked_matches.append({
+                'faculty_project': faculty_project,
+                'student_name': student,
+                'probability_of_match': row['probability_of_match'],
+                'student_rank': row['student_rank'],
+                'faculty_rank': row['faculty_rank'],
+                'original_project_name': row['original_project_name'],
+                'faculty_name': row['faculty_name'],
+                'locked': True
+            })
+            
+            # Reduce available slots for this project
+            if faculty_project in updated_faculty_slots:
+                updated_faculty_slots[faculty_project] = max(0, updated_faculty_slots[faculty_project] - 1)
+            
+            # Remove this match from remaining pairs (both student and faculty project)
+            remaining_pairs = remaining_pairs[
+                ~((remaining_pairs['student_name'] == student) | 
+                  (remaining_pairs['faculty_project'] == faculty_project))
+            ]
+    
+    # Then process mandatory matches (both rank each other #1)
+    grouped = remaining_pairs.groupby(['student_name', 'faculty_project'])
     
     # Iterate through unique student-faculty project combinations
     for (student, faculty_project), group in grouped:
-        # Check if this is a mandatory match
         match_row = group.iloc[0]
         
         # Conditions for a mandatory match:
@@ -234,14 +265,15 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict):
             # Verify there are still slots available for this project
             if updated_faculty_slots.get(faculty_project, 0) > 0:
                 # Add to mandatory matches
-                mandatory_matches.append({
+                locked_matches.append({
                     'faculty_project': faculty_project,
                     'student_name': student,
                     'probability_of_match': match_row['probability_of_match'],
                     'student_rank': match_row['student_rank'],
                     'faculty_rank': match_row['faculty_rank'],
                     'original_project_name': match_row['original_project_name'],
-                    'faculty_name': match_row['faculty_name']
+                    'faculty_name': match_row['faculty_name'],
+                    'locked': True
                 })
                 
                 # Reduce available slots for this project
@@ -253,10 +285,10 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict):
                       (remaining_pairs['faculty_project'] == faculty_project))
                 ]
     
-    # Convert mandatory matches to DataFrame
-    mandatory_matches_df = pd.DataFrame(mandatory_matches)
+    # Convert locked matches to DataFrame
+    locked_matches_df = pd.DataFrame(locked_matches) if locked_matches else pd.DataFrame(columns=input_data.columns.tolist() + ['locked'])
     
-    return remaining_pairs, mandatory_matches_df, updated_faculty_slots
+    return remaining_pairs, locked_matches_df, updated_faculty_slots
 
 
 # ---------------------------- END PREPROCESSING FUNCTIONS ----------------
@@ -341,7 +373,8 @@ def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict):
             "student_rank": pairs[i]["student_rank"],
             "faculty_rank": pairs[i]["faculty_rank"],
             "original_project_name": pairs[i]["original_project_name"],
-            "faculty_name": pairs[i]["faculty_name"]
+            "faculty_name": pairs[i]["faculty_name"],
+            "locked": False
         }
         for i in range(len(pairs))
         if pulp.value(x[i]) == 1
