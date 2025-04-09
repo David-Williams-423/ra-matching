@@ -1,6 +1,6 @@
 # -------------------------- START IMPORTS -------------------------
 
-from load_config import load_config
+from config import load_config
 
 import pandas as pd
 

@@ -2,7 +2,7 @@
 # from rapidfuzz import fuzz
 
 # from firebase_config import get_firestore_prefix
-from load_config import get_ilp_alpha, get_ilp_beta, get_max_rank
+from config import get_ilp_alpha, get_ilp_beta, get_max_rank
 
 import pandas as pd
 
