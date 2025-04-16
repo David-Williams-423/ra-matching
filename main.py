@@ -21,11 +21,15 @@ def main():
     global FACULTY_WEIGHT, NO_RANK_PENALTY, LOW_RANK_PENALTY
 
     if len(sys.argv) < 3:
-        print("Usage: python main.py <student_file.csv> <faculty_file.csv>")
+        print("Usage: python main.py <student_file.csv> <faculty_file.csv> [<locking_file.csv>]")
         sys.exit(1)
 
     file_path_student = sys.argv[1]
     file_path_faculty = sys.argv[2]
+
+    file_path_locking = None
+    if (len(sys.argv)) > 3:
+        file_path_locking = sys.argv[3]
 
     config = load_config()
     FACULTY_WEIGHT = config["faculty_weight"]
@@ -50,6 +54,16 @@ def main():
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         sys.exit(1)
+    if (file_path_locking is not None):
+        try:
+            # Read CSV file into DataFrame
+            df_locking = pd.read_csv(file_path_locking)
+        except FileNotFoundError:
+            print(f"Error: File '{file_path_locking}' not found.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            sys.exit(1)
 
     input_data, faculty_slots = process_preferences(df_student, df_faculty)
 
@@ -197,7 +211,7 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
     return pd.DataFrame(pairs), faculty_slots
 
 
-def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict):
+def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, locks: pd.DataFrame):
     """
     Identify and assign mandatory matches where both student and faculty 
     have each other as their first choice.
