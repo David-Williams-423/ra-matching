@@ -3,4 +3,4 @@
 # A value of 1 indicates that the faculty holds all of the consideration
 # and a value of 0 indicates that the student holds all.
 # A value of 0.5 is neutral
-FACULTY_WEIGHT = 0.8
+FACULTY_WEIGHT = 0.7
