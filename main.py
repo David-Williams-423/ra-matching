@@ -246,7 +246,7 @@ def process_locks_exclusions(locking_df: pd.DataFrame):
     
     return locks, exclusions
 
-def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, locks: list):
+def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, locks: list = None):
     """
     Identify and assign mandatory matches where both student and faculty 
     have each other as their first choice.
@@ -282,11 +282,12 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
         # 2a. Student rank is 1 (first choice)
         # 2b. Faculty rank is 1 (first choice)
         locked_pair = False
-        for (locked_faculty_project, locked_student) in locks:
-            if locked_faculty_project == faculty_project and locked_student == student:
-                locked_pair = True
-            else:
-                print(student, faculty_project, locked_student, locked_faculty_project)
+        if locks and len(locks) > 0:
+            for (locked_faculty_project, locked_student) in locks:
+                if locked_faculty_project == faculty_project and locked_student == student:
+                    locked_pair = True
+                else:
+                    print(student, faculty_project, locked_student, locked_faculty_project)
 
 
         if locked_pair or ((match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1)):
@@ -322,7 +323,7 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
 
 # ---------------------------- START ILP FUNCTIONS ------------------------
 
-def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusions: list):
+def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusions: list = None):
     """
     Solves the faculty-student matching problem using two separate preference DataFrames.
     
