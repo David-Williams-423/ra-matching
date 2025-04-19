@@ -27,11 +27,6 @@ def main():
     file_path_student = sys.argv[1]
     file_path_faculty = sys.argv[2]
 
-    config = load_config()
-    FACULTY_WEIGHT = config["faculty_weight"]
-    LOW_RANK_PENALTY = config["low_rank_penalty"]
-    NO_RANK_PENALTY = config["no_rank_penalty"]
-
     try:
         # Read CSV file into DataFrame
         df_student = pd.read_csv(file_path_student)
@@ -65,9 +60,10 @@ def main():
 
 # -------------------------- START CONFIG -------------------------
 
-FACULTY_WEIGHT = None
-LOW_RANK_PENALTY = None
-NO_RANK_PENALTY = None
+config = load_config()
+FACULTY_WEIGHT = config["faculty_weight"]
+LOW_RANK_PENALTY = config["low_rank_penalty"]
+NO_RANK_PENALTY = config["no_rank_penalty"]
 
 # -------------------------- END CONFIG -------------------------
 
