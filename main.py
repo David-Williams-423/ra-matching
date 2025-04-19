@@ -61,10 +61,11 @@ def main():
             sys.exit(1)
 
     input_data, faculty_slots = process_preferences(df_student, df_faculty)
+    locks, exclusions = process_locks_exclusions(df_locking)
 
-    input_data, mandatory_matches, faculty_slots = assign_mandatory_matches(input_data, faculty_slots)
+    input_data, mandatory_matches, faculty_slots = assign_mandatory_matches(input_data, faculty_slots, locks)
 
-    ilp_matches = perform_ilp_matching(input_data, faculty_slots)
+    ilp_matches = perform_ilp_matching(input_data, faculty_slots, exclusions)
 
     combined_matches = pd.concat([mandatory_matches, ilp_matches], ignore_index=True)
     combined_matches = combined_matches.sort_values('probability_of_match', ascending=False)
@@ -206,8 +207,46 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
     
     return pd.DataFrame(pairs), faculty_slots
 
+def process_locks_exclusions(locking_df: pd.DataFrame):
+    """
+    Process a DataFrame with columns "Faculty Project", "Student Name", "Locked", "Excluded"
+    and extract lists of locks and exclusions.
+    
+    Args:
+        locking_df (pd.DataFrame): DataFrame with assignment data
+        
+    Returns:
+        Tuple containing:
+            - List of locks (tuples of (project, student))
+            - List of exclusions (tuples of (project, student))
+    """
+    # Validate column names
+    required_columns = ["Faculty Project", "Student Name", "Locked", "Excluded"]
+    if not all(col in locking_df.columns for col in required_columns):
+        missing = [col for col in required_columns if col not in locking_df.columns]
+        raise ValueError(f"Missing required columns: {', '.join(missing)}")
+    
+    # Check for rows with both Locked and Excluded as True
+    invalid_rows = locking_df[(locking_df["Locked"] == True) & (locking_df["Excluded"] == True)]
+    if not invalid_rows.empty:
+        conflicting_rows = invalid_rows[["Faculty Project", "Student Name"]].values.tolist()
+        raise ValueError(f"Found {len(invalid_rows)} rows with both Locked and Excluded as True: {conflicting_rows}")
+    
+    # Extract locks
+    locks = []
+    locked_rows = locking_df[locking_df["Locked"] == True]
+    for _, row in locked_rows.iterrows():
+        locks.append((row["Faculty Project"], row["Student Name"]))
+    
+    # Extract exclusions
+    exclusions = []
+    excluded_rows = locking_df[locking_df["Excluded"] == True]
+    for _, row in excluded_rows.iterrows():
+        exclusions.append((row["Faculty Project"], row["Student Name"]))
+    
+    return locks, exclusions
 
-def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, locks: pd.DataFrame):
+def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, locks: list):
     """
     Identify and assign mandatory matches where both student and faculty 
     have each other as their first choice.
@@ -238,9 +277,19 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
         match_row = group.iloc[0]
         
         # Conditions for a mandatory match:
-        # 1. Student rank is 1 (first choice)
-        # 2. Faculty rank is 1 (first choice)
-        if (match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1):
+        # 1. Student-Faculty Pairing in the Locked List
+        # OR
+        # 2a. Student rank is 1 (first choice)
+        # 2b. Faculty rank is 1 (first choice)
+        locked_pair = False
+        for (locked_faculty_project, locked_student) in locks:
+            if locked_faculty_project == faculty_project and locked_student == student:
+                locked_pair = True
+            else:
+                print(student, faculty_project, locked_student, locked_faculty_project)
+
+
+        if locked_pair or ((match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1)):
             # Verify there are still slots available for this project
             if updated_faculty_slots.get(faculty_project, 0) > 0:
                 # Add to mandatory matches
@@ -273,7 +322,7 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
 
 # ---------------------------- START ILP FUNCTIONS ------------------------
 
-def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict):
+def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusions: list):
     """
     Solves the faculty-student matching problem using two separate preference DataFrames.
     
@@ -333,6 +382,19 @@ def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict):
             <= num_openings,
             f"Faculty_Openings_{faculty_project}",
         )
+
+    # Add constraints for exclusions if provided
+    if exclusions and len(exclusions) > 0:
+        for i in range(len(pairs)):
+            faculty_project = pairs[i]["faculty_project"]
+            student_name = pairs[i]["student_name"]
+            
+            # If this pair is in the exclusions list, force its x variable to be 0
+            if (faculty_project, student_name) in exclusions:
+                problem += (
+                    x[i] == 0,
+                    f"Exclusion_{faculty_project}_{student_name}"
+                )
 
     # Solve the ILP problem
     problem.solve()
