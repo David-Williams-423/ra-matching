@@ -290,6 +290,7 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
                     print(student, faculty_project, locked_student, locked_faculty_project)
 
 
+
         if locked_pair or ((match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1)):
             # Verify there are still slots available for this project
             if updated_faculty_slots.get(faculty_project, 0) > 0:
