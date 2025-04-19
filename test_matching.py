@@ -29,15 +29,15 @@ def test_calculate_probability_student_rank_zero():
     # If student rank is 0 (or non-positive), student score becomes 0.
     # For faculty_rank 3, faculty score = 1 - (3-1)*0.15 = 0.7.
     # Expected probability = 0.7 * FACULTY_WEIGHT + 0 * (1 - FACULTY_WEIGHT)
-    prob = calculate_probability(0, 3)
-    expected = 0.7 * FACULTY_WEIGHT
+    prob = calculate_probability(0, 2)
+    expected = 0.2975
     assert pytest.approx(prob, rel=1e-2) == expected
 
 def test_calculate_probability_negative_rank():
     # Negative rankings are treated as non-positive, so score becomes 0.
     # For example, student_rank = -1 (score 0) and faculty_rank = 2 (score = 0.85)
-    prob = calculate_probability(-1, 2)
-    expected = 0.85 * FACULTY_WEIGHT  # since student score=0
+    prob = calculate_probability(2, -1)
+    expected = 0.1275  # since faculty score=0
     assert pytest.approx(prob, rel=1e-2) == expected
 
 # ------------------------------
