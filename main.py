@@ -27,9 +27,11 @@ def main():
     file_path_student = sys.argv[1]
     file_path_faculty = sys.argv[2]
     file_path_locking = None
-    if (len(sys.argv)) > 3:
+    if len(sys.argv) > 3:
         file_path_locking = sys.argv[3]
-
+    file_path_previous = None
+    if len(sys.argv) > 4:
+        file_path_previous = sys.argv[4]
 
     try:
         # Read CSV file into DataFrame
@@ -59,6 +61,16 @@ def main():
         except Exception as e:
             print(f"An error occurred: {str(e)}")
             sys.exit(1)
+    if (file_path_previous is not None):
+        try:
+            # Read CSV file into DataFrame
+            df_previous = pd.read_csv(file_path_previous)
+        except FileNotFoundError:
+            print(f"Error: File '{file_path_previous}' not found.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            sys.exit(1)
 
     input_data, faculty_slots = process_preferences(df_student, df_faculty)
     locks, exclusions = process_locks_exclusions(df_locking)
@@ -67,6 +79,15 @@ def main():
 
     ilp_matches = perform_ilp_matching(input_data, faculty_slots, exclusions)
 
+    combined_matches = pd.concat([mandatory_matches, ilp_matches], ignore_index=True)
+    combined_matches = combined_matches.sort_values('probability_of_match', ascending=False)
+
+
+    print(combined_matches)
+    
+    exclusions.append(("Professor 1 - Genomics Research Scientist", "Priya Sharma"))
+
+    ilp_matches = perform_ilp_matching(input_data, faculty_slots, exclusions, combined_matches)
     combined_matches = pd.concat([mandatory_matches, ilp_matches], ignore_index=True)
     combined_matches = combined_matches.sort_values('probability_of_match', ascending=False)
 
@@ -79,6 +100,7 @@ config = load_config()
 FACULTY_WEIGHT = config["faculty_weight"]
 LOW_RANK_PENALTY = config["low_rank_penalty"]
 NO_RANK_PENALTY = config["no_rank_penalty"]
+SIMILARITY_WEIGHT = config["similarity_weight"]
 
 # -------------------------- END CONFIG -------------------------
 
@@ -101,7 +123,6 @@ def calculate_probability(student_rank, faculty_rank, method='normal'):
     else:
         # Normal calculation for mutual rankings
         return (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
-
 
 def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame):
     """
@@ -286,9 +307,6 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
             for (locked_faculty_project, locked_student) in locks:
                 if locked_faculty_project == faculty_project and locked_student == student:
                     locked_pair = True
-                else:
-                    print(student, faculty_project, locked_student, locked_faculty_project)
-
 
 
         if locked_pair or ((match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1)):
@@ -324,7 +342,8 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
 
 # ---------------------------- START ILP FUNCTIONS ------------------------
 
-def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusions: list = None):
+def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict,
+                    exclusions: list = None, previous: pd.DataFrame = None):
     """
     Solves the faculty-student matching problem using two separate preference DataFrames.
     
@@ -352,10 +371,28 @@ def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusio
     # Define binary decision variables for each faculty-student pair
     x = pulp.LpVariable.dicts("match", (range(len(pairs))), cat="Binary")
 
-    # Objective function: Maximize the weighted sum of probabilities of assigned matches
-    problem += pulp.lpSum(
+    # Define the base probability maximization component
+    probability_component = pulp.lpSum(
         [pairs[i]["probability_of_match"] * x[i] for i in range(len(pairs))]
     )
+
+    # Add similarity component if there are previous matchings
+    if previous is not None:
+        # Convert previous matchings to a set for fast lookup
+        previous_matches = set([(row["faculty_project"], row["student_name"]) 
+                            for _, row in previous.iterrows()])
+        
+        # Define similarity component
+        similarity_component = pulp.lpSum(
+            [x[i] for i in range(len(pairs)) 
+            if (pairs[i]["faculty_project"], pairs[i]["student_name"]) in previous_matches]
+        )
+        
+        # Combined objective with weights
+        problem += (1 - SIMILARITY_WEIGHT) * probability_component + SIMILARITY_WEIGHT * similarity_component
+    else:
+        # Just use probability component if no previous matchings
+        problem += probability_component
 
     # Constraints: Each student can be matched with at most one faculty project
     for student in input_data["student_name"].unique():
@@ -399,7 +436,7 @@ def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusio
                 )
 
     # Solve the ILP problem
-    problem.solve()
+    problem.solve(pulp.PULP_CBC_CMD(msg=False))
 
     # Check if an optimal solution was found
     if pulp.LpStatus[problem.status] != "Optimal":
