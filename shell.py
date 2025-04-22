@@ -4,7 +4,7 @@ import cmd
 import sys
 import pandas as pd
 from algo_config import get_faculty_weight, set_faculty_weight
-from main import (
+from main2 import (
     process_preferences,
     assign_mandatory_matches,
     perform_ilp_matching,
