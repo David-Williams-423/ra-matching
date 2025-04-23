@@ -14,7 +14,7 @@ from main2 import (
 class MatchingShell(cmd.Cmd):
     """Interactive shell for RA/TA matching with live configuration."""
 
-    prompt = '(match)'
+    prompt = '(match)> '
 
     def __init__(self, faculty_file, student_file):
         """Initialize the shell with faculty and student data files."""
@@ -53,7 +53,7 @@ class MatchingShell(cmd.Cmd):
         """Execute matching with the current configuration."""
         print("\nRunning matching algorithm...")
         self.process_data()
-        print(f"Generated {len(self.matches)} matches.")
+        print(f"Generated {len(self.ilp_matches)} matches.")
         print("Use 'show_matches' to view the results.")
 
     def do_change_weights(self, arg):
