@@ -94,6 +94,20 @@ class MatchingShell(cmd.Cmd):
             print("\nCurrent matches:")
             print(self.combined_matches.to_string(index=False))
 
+    def do_return_csv(self, arg):
+        """Export current matches to CSV.
+        Usage: return_csv <filename>
+        """
+        if not arg:
+            print("Please provide a filename.")
+            return
+        
+        try:
+            self.combined_matches.to_csv(arg, index=False)
+            print(f"Matches exported to {arg}.")
+        except Exception as e:
+            print(f"Failed to export: {e}")
+
     def do_exit(self, arg):
         """Exit the shell."""
         print("Exiting...")
