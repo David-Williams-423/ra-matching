@@ -155,3 +155,38 @@ def test_perform_ilp_matching_single_student():
     # The match should be the one with the higher probability (0.9).
     assert chosen_match['faculty_project'] == "Prof. White - Project X"
     assert chosen_match['student_name'] == "Dana"
+
+# ------------------------------
+# Integration test for mandatory match
+# ------------------------------
+def test_basic_mandatory_match():
+    # Mock student preference data
+    student_data = {
+        "Full Name": ["Alice"],
+        "Rank 1": ["Project B"]
+    }
+    student_df = pd.DataFrame(student_data)
+    
+    # Mock faculty project and slots data
+    faculty_data = {
+        "Full Name": ["Prof. Brown"],
+        "Project #1": ["Project B"],
+        "Number of Open Slots": [1],
+        "Student Rank 1": ["Alice"],
+        "I have another project": [None]
+    }
+    faculty_df = pd.DataFrame(faculty_data)
+
+    # Process preferences
+    input_data, faculty_slots = process_preferences(student_df, faculty_df)
+
+    # Assign mandatory matches
+    remaining_df, mandatory_matches_df, updated_faculty_slots = assign_mandatory_matches(input_data, faculty_slots.copy())
+
+    # Check mandatory match
+    assert len(mandatory_matches_df) == 1
+    assert mandatory_matches_df.iloc[0]["student_name"] == "Alice"
+    assert mandatory_matches_df.iloc[0]["faculty_name"] == "Prof. Brown"
+
+    # Check that slot is reduced
+    assert updated_faculty_slots["Prof. Brown - Project B"] == 0
