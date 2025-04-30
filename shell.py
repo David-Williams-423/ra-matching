@@ -4,7 +4,7 @@ import cmd
 import sys
 import pandas as pd
 from algo_config import get_faculty_weight, set_faculty_weight
-from main2 import (
+from utils import (
     process_preferences,
     assign_mandatory_matches,
     perform_ilp_matching,
@@ -66,6 +66,7 @@ class MatchingShell(cmd.Cmd):
                 raise ValueError("Weight must be between 0 and 1.")
         except ValueError as e:
             print(f"Invalid weight: {e}")
+            print("Make sure you input the files in the correct order: python main.py <student_file> <faculty_file>")
             return
     
         set_faculty_weight(new_weight)
