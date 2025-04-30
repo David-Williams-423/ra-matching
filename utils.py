@@ -112,15 +112,6 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
                 if ranked_student == student_name:
                     faculty_rank = i
                     break
-            
-            # Calculate student rank score
-            student_rank_score = 1.0 - (student_rank - 1) * 0.15 if student_rank > 0 else 0
-            
-            # Calculate faculty rank score
-            faculty_rank_score = 1.0 - (faculty_rank - 1) * 0.15 if faculty_rank > 0 else 0
-            
-            # Combine scores (weighted average)
-            match_probability = (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
 
             match_probability = calculate_probability(student_rank, faculty_rank, faculty_weight)
             
