@@ -58,7 +58,7 @@ class MatchingShell(cmd.Cmd):
 
     def do_change_weights(self, arg):
         """Adjust faculty/student preference weighting
-        Usage: change_weights [0-1] (e.g., change_weights 0.5)]
+        Usage: change_weights [0-1] (e.g., change_weights 0.5)
         """
         try:
             new_weight = float(arg)
