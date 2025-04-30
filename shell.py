@@ -16,7 +16,7 @@ class MatchingShell(cmd.Cmd):
 
     prompt = '(match)> '
 
-    def __init__(self, faculty_file, student_file):
+    def __init__(self, student_file, faculty_file):
         """Initialize the shell with faculty and student data files."""
         super().__init__()
         self.faculty_file = faculty_file

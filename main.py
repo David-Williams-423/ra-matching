@@ -28,7 +28,7 @@ def main():
     file_path_student = sys.argv[1]
     file_path_faculty = sys.argv[2]
 
-    shell = MatchingShell(file_path_faculty, file_path_student)
+    shell = MatchingShell(file_path_student, file_path_faculty)
     shell.cmdloop("\nRA/TA Matching Shell\n" +
                   f"Initial faculty weight: {shell.current_weight}\n" +
                   "Type 'help' for available commands")
