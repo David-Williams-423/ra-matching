@@ -31,6 +31,7 @@ class MatchingShell(cmd.Cmd):
         self.original_faculty_slots = None
         self.previous_file = previous_file
         self.combined_matches = None
+        self.sort = "probability_of_match"
         self.load_initial_data()
 
     def load_initial_data(self):
@@ -101,7 +102,7 @@ class MatchingShell(cmd.Cmd):
         else:
             ilp_matches = perform_ilp_matching(input_data, updated_slots, exclusions)
         self.combined_matches = pd.concat([self.mandatory_matches, ilp_matches], ignore_index=True)
-        self.combined_matches.sort_values('probability_of_match', ascending=False)
+        self.combined_matches.sort_values(self.sort, ascending=False)
 
     def do_run_matching(self, arg):
         """Execute matching with the current configuration."""
@@ -190,6 +191,9 @@ class MatchingShell(cmd.Cmd):
             print("No matches calculated yet.")
             return
         
+        # Sort
+        self.combined_matches.sort_values('probability_of_match', ascending=False, inplace=True)
+        print(f"Sorted by {self.sort}")
         # Parse optional args
         top_n = None
         if '--top' in arg:
@@ -202,6 +206,41 @@ class MatchingShell(cmd.Cmd):
         else:
             print("\nCurrent matches:")
             print(self.combined_matches.to_string(index=False))
+
+
+    def do_change_sort(self, arg):
+        """
+        Change the field by which matches are sorted.
+        Usage: change_sort [-f | -s | -p | -sr | -fr | -o | -fn]
+        -f   : faculty_project
+        -s   : student_name
+        -p   : probability_of_match
+        -sr  : student_rank
+        -fr  : faculty_rank
+        -o   : original_project_name
+        -fn  : faculty_name
+        """
+        flag_map = {
+            '-f': 'faculty_project',
+            '-s': 'student_name',
+            '-p': 'probability_of_match',
+            '-sr': 'student_rank',
+            '-fr': 'faculty_rank',
+            '-o': 'original_project_name',
+            '-fn': 'faculty_name',
+        }
+
+        args = arg.strip().split()
+        if not args:
+            print("No sort option provided. Use 'help change_sort' for usage.")
+            return
+
+        flag = args[0]
+        if flag in flag_map:
+            self.sort = flag_map[flag]
+            print(f"Sort field changed to '{self.sort}'.")
+        else:
+            print(f"Invalid sort flag '{flag}'. Use 'help change_sort' for valid options.")
 
     def do_show_config(self, arg):
         """Display current configuration.
