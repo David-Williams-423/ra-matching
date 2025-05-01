@@ -200,6 +200,64 @@ class MatchingShell(cmd.Cmd):
             print("\nCurrent matches:")
             print(self.combined_matches.to_string(index=False))
 
+    def do_show_locks_exclusions(self, arg):
+        """Display current locking file.
+        Usage: show_locks_exclusions
+        """
+        if self.locking_file is None:
+            print("No locking file provided.")
+            return
+        
+        try:
+            df_locking = pd.read_csv(self.locking_file)
+            print("\nCurrent locking file:")
+            print(df_locking.to_string(index=False))
+        except Exception as e:
+            print(f"Failed to read locking file: {e}")
+            return
+    
+    def do_lock(self, arg):
+        """Set locking file.
+        Usage: lock <faculty_name> <project_name> <student_name> [<filename>]
+        """
+        if not arg:
+            print("Please provide the following arguments: <faculty_name> <project_name> <student_name> [<filename>]")
+            return
+        arg = arg.split()
+        if self.locking_file is None:
+            # Check for the optional filename argument
+            if len(arg) < 3:
+                print("Please provide a filename.")
+                return
+
+            
+        try:
+            self.locking_file = arg[3] if len(arg) == 4 else self.locking_file
+            self.df_locking = pd.read_csv(self.locking_file)
+            print(f"Locking file set to {arg}.")
+        except FileNotFoundError:
+            print(f"Error: File '{arg}' not found.")
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+        
+        # Add a row to the locking file csv
+        new_row = {
+            "Faculty Name": arg[0],
+            "Project": arg[1],
+            "Student Name": arg[2],
+            "Locked": True,
+            "Excluded": False,
+        }
+        if self.df_locking is not None:
+            self.df_locking = pd.concat([self.df_locking, pd.DataFrame([new_row])], ignore_index=True)
+        else:
+            self.df_locking = pd.DataFrame([new_row])
+        self.df_locking.to_csv(self.locking_file, index=False)
+        print(f"Locking file updated with {new_row}.")
+        print(f"Run 'run_matching' to re-run the algorithm with new locks.")
+
+    
+
     def do_return_csv(self, arg):
         """Export current matches to CSV.
         Usage: return_csv <filename>
