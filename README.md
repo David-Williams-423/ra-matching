@@ -9,25 +9,30 @@ An optimization system for automating graduate student job assignments using con
 
 ## Prerequisites
 - **Python 3.7+**
-- Required packages:
-  ```bash
-  pip install pandas pulp
-  ```
+- Required packages in `requirements.txt`
 - Input CSV files formatted as specified below
 
-## Installing Dependencies
-To install the required Python dependencies for this project, follow these steps:
+### Installation
 
-- Navigate to the project directory:
-  ```bash
-  cd ra-matching
-  ```
+Build ra-matching from the source and install dependencies:
 
-- Install the dependencies listed in requirements.txt:
+1. **Clone the repository:**
 
-  ```bash
-  pip install -r requirements.txt
-  ```
+    ```bash
+    ❯ git clone https://github.com/David-Williams-423/ra-matching
+    ```
+
+2. **Navigate to the project directory:**
+
+    ```bash
+    ❯ cd ra-matching
+    ```
+
+3. **Install the dependencies:**
+
+    ```bash
+    ❯ pip install -r requirements.txt
+    ```
 
 ## How to Use
 
@@ -116,7 +121,7 @@ Professor 2 - Molecular Biology Research Associate,Ethan Nguyen,0.895,1,2,Molecu
 
 Note: This is the same format of the output file
 
-### 3. Run the Matching
+### 3. Run the Program
 
 ```bash
 python main.py <students.csv> <faculty.csv> [<excluded_locked.csv>] [<previous_matching.csv>]
@@ -132,15 +137,15 @@ The system outputs a sorted list of matches with columns:
 | `probability_of_match` | Match quality score (0.0-1.0) |
 | `student_rank` | Student's preference rank (0=unranked) |
 | `faculty_rank` | Faculty's preference rank (0=unranked) |
-| 'original_project_name' | Original name of the faculty member's project | 
-| 'faculty_name' | Name of the faculty member | 
+| `original_project_name` | Original name of the faculty member's project | 
+| `faculty_name` | Name of the faculty member | 
 
 Example output:
 ```
-               faculty_project                     student_name  probability_of_match  student_rank  faculty_rank
-0  Professor 4 - Autonomous Vehicle Research Assistant       Grace Hopper                  1.00             1             1
-1                    Professor 1 - AI Ethics Researcher       Lucas Bennett                  1.00             1             1
-2       Professor 1 - Machine Learning Research Scientist        Olivia Chen                  0.15             1            -1
+               faculty_project                               student_name  probability_of_match  student_rank  faculty_rank
+0  Professor 4 - Autonomous Vehicle Research Assistant       Grace Hopper            1.00             1             1
+1  Professor 1 - AI Ethics Researcher                        Lucas Bennett           1.00             1             1
+2  Professor 1 - Machine Learning Research Scientist         Olivia Chen             0.15             1            -1
 ```
 
 ### 5. Save Results (Optional)
@@ -172,3 +177,55 @@ python main.py students.csv faculty.csv > matches.csv
 3. **Combine Results**  
    - Mandatory matches + optimized matches
    - Sort by match probability (highest first)
+  
+
+### Project Index
+
+<details>
+		<summary><b>ra-matching</b></summary>
+		<blockquote>
+			<table style='width: 100%; border-collapse: collapse;'>
+			<thead>
+				<tr style='background-color: #f8f9fa;'>
+					<th style='width: 30%; text-align: left; padding: 8px;'>File Name</th>
+					<th style='text-align: left; padding: 8px;'>Summary</th>
+				</tr>
+			</thead>
+				<tr style='border-bottom: 1px solid #eee;'>
+					<td style='padding: 8px;'><b><a href='https://github.com/David-Williams-423/ra-matching/blob/master/config.py'>config.py</a></b></td>
+					<td style='padding: 8px;'>- Config.py` centralizes algorithm configuration parameters<br>- It loads settings from a YAML file, providing defaults and input validation to ensure parameter ranges are respected<br>- The module offers functions to load, save, and access individual configuration values, facilitating flexible parameter management within the broader application<br>- This ensures consistent and controlled access to crucial algorithm settings.</td>
+				</tr>
+				<tr style='border-bottom: 1px solid #eee;'>
+					<td style='padding: 8px;'><b><a href='https://github.com/David-Williams-423/ra-matching/blob/master/LICENSE'>LICENSE</a></b></td>
+					<td style='padding: 8px;'>- The LICENSE file specifies the projects open-source licensing terms<br>- It grants users broad permissions to use, modify, and distribute the software under the MIT License, a permissive license that minimizes liability for the copyright holder, David Williams<br>- This ensures legal clarity and facilitates community contribution and wider adoption of the project.</td>
+				</tr>
+				<tr style='border-bottom: 1px solid #eee;'>
+					<td style='padding: 8px;'><b><a href='https://github.com/David-Williams-423/ra-matching/blob/master/requirements.txt'>requirements.txt</a></b></td>
+					<td style='padding: 8px;'>- Requirements.txt` specifies the projects dependencies<br>- It ensures the projects successful execution by defining necessary versions of Pandas for data manipulation, PuLP for optimization, PyYAML for configuration file handling, and Argparse for command-line argument parsing<br>- These libraries provide the foundational tools for the application's core functionality.</td>
+				</tr>
+				<tr style='border-bottom: 1px solid #eee;'>
+					<td style='padding: 8px;'><b><a href='https://github.com/David-Williams-423/ra-matching/blob/master/shell.py'>shell.py</a></b></td>
+					<td style='padding: 8px;'>- The <code>shell.py</code> file provides an interactive command-line interface (CLI) for a Resident Advisor (RA)/Teaching Assistant (TA) matching system<br>- It allows users to load student and faculty data, configure matching preferences (likely using the <code>config</code> module), and perform the matching process (leveraging functions from the <code>utils</code> module, including an Integer Linear Programming (ILP) solver)<br>- The CLI facilitates interactive management of the matching process, potentially incorporating lock and exclusion constraints from a separate file<br>- The system appears to maintain and update matching results throughout the interactive session.</td>
+				</tr>
+				<tr style='border-bottom: 1px solid #eee;'>
+					<td style='padding: 8px;'><b><a href='https://github.com/David-Williams-423/ra-matching/blob/master/config.yaml'>config.yaml</a></b></td>
+					<td style='padding: 8px;'>- Config.yaml` defines weighting parameters for a ranking algorithm<br>- It specifies penalties for low ranks and weights for faculty and student input, influencing the overall ranking calculation within the larger project<br>- These parameters control the relative importance of different ranking factors, impacting the final ranked output<br>- The configuration facilitates adjustments to the ranking process without modifying core code.</td>
+				</tr>
+				<tr style='border-bottom: 1px solid #eee;'>
+					<td style='padding: 8px;'><b><a href='https://github.com/David-Williams-423/ra-matching/blob/master/utils.py'>utils.py</a></b></td>
+					<td style='padding: 8px;'>- Utils.py` provides utility functions for a student-faculty matching system<br>- It preprocesses preference data, calculating match probabilities based on ranking and applying penalties for missing rankings<br>- The module then performs an integer linear programming (ILP) optimization to find the optimal matching, considering locks, exclusions, and optionally, previous matchings to maximize overall match probability and similarity to prior assignments.</td>
+				</tr>
+				<tr style='border-bottom: 1px solid #eee;'>
+					<td style='padding: 8px;'><b><a href='https://github.com/David-Williams-423/ra-matching/blob/master/test_matching.py'>test_matching.py</a></b></td>
+					<td style='padding: 8px;'>- Tests validate the student-faculty project matching algorithm<br>- Unit tests cover probability calculation, preference processing, mandatory match assignment, and an integer linear programming (ILP) based optimization for final matching<br>- The tests ensure accurate probability computation, correct handling of preferences and constraints, and optimal assignment based on available slots and rankings.</td>
+				</tr>
+				<tr style='border-bottom: 1px solid #eee;'>
+					<td style='padding: 8px;'><b><a href='https://github.com/David-Williams-423/ra-matching/blob/master/main.py'>main.py</a></b></td>
+					<td style='padding: 8px;'>- The <code>main.py</code> script executes a RA/TA matching program<br>- It takes student and faculty data files as input, optionally incorporating locking and previous matching data<br>- The program uses a shell interface, driven by the <code>MatchingShell</code> class, allowing interactive matching and manipulation of the data based on a configurable faculty weight<br>- The script manages command-line arguments and program initialization.</td>
+				</tr>
+			</table>
+		</blockquote>
+	</details>
+			</details>
+		</blockquote>
+</details>
