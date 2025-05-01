@@ -10,6 +10,7 @@ FACULTY_WEIGHT = get_config_value("faculty_weight")
 LOW_RANK_PENALTY = get_config_value("low_rank_penalty")
 STUDENT_NO_RANK_PENALTY = get_config_value("student_no_rank_penalty")
 FACULTY_NO_RANK_PENALTY = get_config_value("faculty_no_rank_penalty")
+SIMILARITY_WEIGHT = get_config_value("similarity_weight")
 
 # -------------------------- END CONFIG -------------------------
 
