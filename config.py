@@ -1,14 +1,6 @@
 import yaml
 import os
 
-# Alpha is the penalty applied to the student's rankings for the faculty
-# The higher alpha is, the more faculty's preferences matter more than students'
-ILP_ALPHA = 3
-
-# Beta is the penalty applied to the faculty's rankings for the student
-# The higher beta is, the more students' preferences matter than faculty's
-ILP_BETA = 1
-
 CONFIG_PATH = 'config.yaml'
 
 
@@ -107,26 +99,3 @@ def set_config_value(key, value):
     config = load_config()
     config[key] = value
     save_config(config)
-
-
-def get_ilp_alpha():
-    """Get the ILP alpha value."""
-    return ILP_ALPHA
-
-def get_ilp_beta():
-    """Get the ILP beta value."""
-    return ILP_BETA
-
-def get_faculty_weight():
-    """Get the faculty weight for matching."""
-    config = load_config()
-    return config['faculty_weight']
-
-def set_faculty_weight(new_weight):
-    """Set the faculty weight for matching."""
-    config = load_config()
-    if not 0 <= new_weight <= 1:
-        raise ValueError("Weight must be between 0 and 1.")
-    config['faculty_weight'] = new_weight
-    with open('config.yaml', 'w') as config_file:
-        yaml.dump(config, config_file)

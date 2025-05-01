@@ -10,7 +10,6 @@ from utils import (
     process_locks_exclusions
 )
 from config import (
-    get_config_value,
     set_config_value,
 )
 
@@ -26,7 +25,6 @@ class MatchingShell(cmd.Cmd):
         self.faculty_file = faculty_file
         self.student_file = student_file
         self.locking_file = locking_file
-        self.current_weight = get_config_value('faculty_weight')
         self.original_faculty_slots = None
         self.load_initial_data()
 
@@ -77,7 +75,7 @@ class MatchingShell(cmd.Cmd):
             exclusions = None
         self.original_faculty_slots = faculty_slots.copy()
         
-        input_data, self.mandatory_matches, updated_slots = assign_mandatory_matches(input_data, faculty_slots)
+        input_data, self.mandatory_matches, updated_slots = assign_mandatory_matches(input_data, faculty_slots, locks)
         self.ilp_matches = perform_ilp_matching(input_data, updated_slots, exclusions)
         self.combined_matches = pd.concat([self.mandatory_matches, self.ilp_matches], ignore_index=True)
         self.combined_matches.sort_values('probability_of_match', ascending=False)
@@ -103,7 +101,6 @@ class MatchingShell(cmd.Cmd):
             return
     
         set_config_value('faculty_weight', new_weight)
-        self.current_weight = new_weight
         print(f"\nWeights update - Faculty preference weight: {new_weight}")
         print(f"Run 'run_matching' to re-run the algorithm with new weights.")
 

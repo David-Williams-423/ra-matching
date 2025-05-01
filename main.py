@@ -11,7 +11,10 @@ pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
 
 import sys
-import pulp
+
+from config import (
+    get_config_value
+)
 
 # -------------------------- END IMPORTS -------------------------
 
@@ -32,7 +35,7 @@ def main():
 
     shell = MatchingShell(file_path_student, file_path_faculty, file_path_locking)
     shell.cmdloop("\nRA/TA Matching Shell\n" +
-                  f"Initial faculty weight: {shell.current_weight}\n" +
+                  f"Initial faculty weight: {get_config_value('faculty_weight')}\n" +
                   "Type 'help' for available commands")
 
 
