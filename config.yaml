@@ -13,7 +13,9 @@ faculty_weight: 0.7
 # - 0.0: One-sided preferences result in zero probability (most strict)
 # - 0.5: One-sided preferences have their probability reduced by half (balanced)
 # - 1.0: No penalty applied (same as original algorithm)
-no_rank_penalty: 0.5
+student_no_rank_penalty: 0.5
+
+faculty_no_rank_penalty: 0.5
 
 # LOW_RANK_PENALTY: Controls how much to reduce match probability when
 #    a party ranks another lower than 1

@@ -2,12 +2,12 @@ import pytest
 import pandas as pd
 
 # Import the functions to test.
-from main import (
-    FACULTY_WEIGHT,
+from utils import (
     calculate_probability,
     process_preferences,
     assign_mandatory_matches,
     perform_ilp_matching,
+    FACULTY_WEIGHT
 )
 
 # ------------------------------
