@@ -102,7 +102,6 @@ class MatchingShell(cmd.Cmd):
         else:
             ilp_matches = perform_ilp_matching(input_data, updated_slots, exclusions)
         self.combined_matches = pd.concat([self.mandatory_matches, ilp_matches], ignore_index=True)
-        self.combined_matches.sort_values(self.sort, ascending=False)
 
     def do_run_matching(self, arg):
         """Execute matching with the current configuration."""
@@ -192,7 +191,7 @@ class MatchingShell(cmd.Cmd):
             return
         
         # Sort
-        self.combined_matches.sort_values('probability_of_match', ascending=False, inplace=True)
+        self.combined_matches.sort_values(self.sort, ascending=False, inplace=True)
         print(f"Sorted by {self.sort}")
         # Parse optional args
         top_n = None
