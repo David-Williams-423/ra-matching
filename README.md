@@ -18,15 +18,16 @@ An optimization system for automating graduate student job assignments using con
 ## Installing Dependencies
 To install the required Python dependencies for this project, follow these steps:
 
-Navigate to the project directory:
+- Navigate to the project directory:
+  ```bash
+  cd ra-matching
+  ```
 
-```bash
-cd ra-matching```
+- Install the dependencies listed in requirements.txt:
 
-Install the dependencies listed in requirements.txt:
-
-```bash
-pip install -r requirements.txt```
+  ```bash
+  pip install -r requirements.txt
+  ```
 
 ## How to Use
 
@@ -69,8 +70,9 @@ similarity_weight: 0.5
 
 ### 2. Prepare Input Files
 **students.csv**
-These are the student preferences
-***Format:***
+- These are the student preferences
+
+Format:
 ```csv
 Full Name,Rank 1,Rank 2,Rank 3,Rank 4,Rank 5,Rank 6
 Alice Chen,"Machine Learning","NLP","Computer Vision","","",""
@@ -78,8 +80,9 @@ Bob Lee,"Robotics","HCI","","","",""
 ```
 
 **faculty.csv**
-These are the faculty preferences
-***Format:***
+- These are the faculty preferences
+
+Format:
 ```csv
 Full Name,Project #1,Number of Open Slots,Student Rank 1,Student Rank 2,Student Rank 3,Student Rank 4,Student Rank 5,I have another project
 Dr. Smith,"NLP Research",2,"Alice Chen","Bob Lee","Charlie Brown","","",No
@@ -87,10 +90,11 @@ Dr. Jones,"Robot Vision",1,"Emma Wilson","","","","",Yes
 ```
 
 **excluded_locked.csv**
-These is an optional file that contains the pairs of students and faculty that are to be locked or excluded.
+- This is an optional file that contains the pairs of students and faculty that are to be locked or excluded.
 Locked: This student, faculty, project combination will be paired together
 Excluded: This student, faculty, project combination will not be paired together
-***Format:***
+
+Format:
 ```csv
 Faculty Name,Project,Student Name,Locked,Excluded
 Professor 3,"Renewable Energy Research Engineer",Samuel Garcia,true,false
@@ -98,8 +102,9 @@ Professor 1,"Machine Learning Research Scientist",Isaac Cohen,false,true
 ```
 
 **previous_matching.csv**
-These is an optional file that contains the output of a previous matching result, in the case where a rerun is desired with minimal alterations to the previous run.
-***Format:***
+- This is an optional file that contains the output of a previous matching result, in the case where a rerun is desired with minimal alterations to the previous run.
+
+Format:
 ```csv
 faculty_project,student_name,probability_of_match,student_rank,faculty_rank,original_project_name,faculty_name
 Professor 4 - Autonomous Vehicle Research Assistant,Grace Hopper,1.0,1,1,Autonomous Vehicle Research Assistant,Professor 4
