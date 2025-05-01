@@ -24,3 +24,10 @@ faculty_no_rank_penalty: 0.5
 # - 0.2: Rank of 1 given score of 1.0, rank of 2 given score of 0.8, etc.
 low_rank_penalty: 0.15
 
+# Weight for similarity with previous matchings (0.0 - 1.0)
+# Higher values prioritize preserving previous matches
+# Lower values prioritize optimizing match probabilities
+# 0.0 = Ignore previous matches completely
+# 1.0 = Focus entirely on preserving previous matches
+similarity_weight: 0.3
+

@@ -19,13 +19,15 @@ class MatchingShell(cmd.Cmd):
 
     prompt = '(match)> '
 
-    def __init__(self, student_file, faculty_file, locking_file=None):
+    def __init__(self, student_file, faculty_file, locking_file=None, previous_file=None):
         """Initialize the shell with faculty and student data files."""
         super().__init__()
         self.faculty_file = faculty_file
         self.student_file = student_file
         self.locking_file = locking_file
         self.original_faculty_slots = None
+        self.previous_file = previous_file
+        self.combined_matches = None
         self.load_initial_data()
 
     def load_initial_data(self):
@@ -58,14 +60,29 @@ class MatchingShell(cmd.Cmd):
             except Exception as e:
                 print(f"An error occurred: {str(e)}")
                 sys.exit(1)
+        if (self.previous_file is not None):
+            try:
+                # Read CSV file into DataFrame
+                self.df_previous = pd.read_csv(self.previous_file)
+            except FileNotFoundError:
+                print(f"Error: File '{self.previous_file}' not found.")
+                sys.exit(1)
+            except Exception as e:
+                print(f"An error occurred: {str(e)}")
+                sys.exit(1)
+        else:
+            self.df_previous = None
 
-        self.process_data()
+        if (self.df_previous is not None):
+            self.combined_matches = self.df_previous
+
+        # self.process_data()
         print(
                 f"Loaded {len(self.df_student)} students and "
                 f"{len(self.df_faculty)} faculty."
             )
 
-    def process_data(self):
+    def process_data(self, rematch):
         """Re-run processing with current weights."""
         input_data, faculty_slots = process_preferences(self.df_student, self.df_faculty)
         if self.locking_file is not None:
@@ -76,15 +93,25 @@ class MatchingShell(cmd.Cmd):
         self.original_faculty_slots = faculty_slots.copy()
         
         input_data, self.mandatory_matches, updated_slots = assign_mandatory_matches(input_data, faculty_slots, locks)
-        self.ilp_matches = perform_ilp_matching(input_data, updated_slots, exclusions)
-        self.combined_matches = pd.concat([self.mandatory_matches, self.ilp_matches], ignore_index=True)
+        if (rematch):
+            ilp_matches = perform_ilp_matching(input_data, updated_slots, exclusions, self.combined_matches)
+        else:
+            ilp_matches = perform_ilp_matching(input_data, updated_slots, exclusions)
+        self.combined_matches = pd.concat([self.mandatory_matches, ilp_matches], ignore_index=True)
         self.combined_matches.sort_values('probability_of_match', ascending=False)
 
     def do_run_matching(self, arg):
         """Execute matching with the current configuration."""
         print("\nRunning matching algorithm...")
-        self.process_data()
-        print(f"Generated {len(self.ilp_matches)} matches.")
+        self.process_data(rematch=False)
+        print(f"Generated {len(self.combined_matches)} matches.")
+        print("Use 'show_matches' to view the results.")
+
+    def do_run_rematching(self, arg):
+        """Execute rematching with current configuration and previous run"""
+        print("\nRunning rematching algorithm...")
+        self.process_data(rematch=True)
+        print(f"Generated {len(self.combined_matches)} matches.")
         print("Use 'show_matches' to view the results.")
 
     def do_change_faculty_weight(self, arg):
@@ -156,7 +183,7 @@ class MatchingShell(cmd.Cmd):
         """Display current matches.
         Usage: show_matches [--top N]
         """
-        if self.combined_matches.empty:
+        if self.combined_matches is None or self.combined_matches.empty:
             print("No matches calculated yet.")
             return
         

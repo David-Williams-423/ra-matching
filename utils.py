@@ -221,9 +221,6 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
             for (locked_faculty_project, locked_student) in locks:
                 if locked_faculty_project == faculty_project and locked_student == student:
                     locked_pair = True
-                else:
-                    print(student, faculty_project, locked_student, locked_faculty_project)
-
 
 
         if locked_pair or ((match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1)):
@@ -257,7 +254,8 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, lock
 
 # ---------------------------- END PREPROCESSING FUNCTIONS ----------------
 
-def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusions: list = None):
+def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict,
+                    exclusions: list = None, previous: pd.DataFrame = None):
     """
     Solves the faculty-student matching problem using two separate preference DataFrames.
     
@@ -285,10 +283,28 @@ def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusio
     # Define binary decision variables for each faculty-student pair
     x = pulp.LpVariable.dicts("match", (range(len(pairs))), cat="Binary")
 
-    # Objective function: Maximize the weighted sum of probabilities of assigned matches
-    problem += pulp.lpSum(
+    # Define the base probability maximization component
+    probability_component = pulp.lpSum(
         [pairs[i]["probability_of_match"] * x[i] for i in range(len(pairs))]
     )
+
+    # Add similarity component if there are previous matchings
+    if previous is not None:
+        # Convert previous matchings to a set for fast lookup
+        previous_matches = set([(row["faculty_project"], row["student_name"]) 
+                            for _, row in previous.iterrows()])
+        
+        # Define similarity component
+        similarity_component = pulp.lpSum(
+            [x[i] for i in range(len(pairs)) 
+            if (pairs[i]["faculty_project"], pairs[i]["student_name"]) in previous_matches]
+        )
+        
+        # Combined objective with weights
+        problem += (1 - SIMILARITY_WEIGHT) * probability_component + SIMILARITY_WEIGHT * similarity_component
+    else:
+        # Just use probability component if no previous matchings
+        problem += probability_component
 
     # Constraints: Each student can be matched with at most one faculty project
     for student in input_data["student_name"].unique():
@@ -332,7 +348,7 @@ def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusio
                 )
 
     # Solve the ILP problem
-    problem.solve()
+    problem.solve(pulp.PULP_CBC_CMD(msg=False))
 
     # Check if an optimal solution was found
     if pulp.LpStatus[problem.status] != "Optimal":

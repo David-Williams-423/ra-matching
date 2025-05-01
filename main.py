@@ -30,14 +30,16 @@ def main():
     file_path_student = sys.argv[1]
     file_path_faculty = sys.argv[2]
     file_path_locking = None
-    if (len(sys.argv)) > 3:
+    if len(sys.argv) > 3:
         file_path_locking = sys.argv[3]
+    file_path_previous = None
+    if len(sys.argv) > 4:
+        file_path_previous = sys.argv[4]
 
-    shell = MatchingShell(file_path_student, file_path_faculty, file_path_locking)
+    shell = MatchingShell(file_path_student, file_path_faculty, file_path_locking, file_path_previous)
     shell.cmdloop("\nRA/TA Matching Shell\n" +
                   f"Initial faculty weight: {get_config_value('faculty_weight')}\n" +
                   "Type 'help' for available commands")
-
 
 if __name__ == "__main__": 
     main()

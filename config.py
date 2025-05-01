@@ -18,7 +18,8 @@ def load_config():
                 'faculty_weight': 0.5,
                 'student_no_rank_penalty': 0.5,
                 'faculty_no_rank_penalty': 0.5,
-                'low_rank_penalty': 0.15
+                'low_rank_penalty': 0.15,
+                'similarity_weight': 0.2
             }
     try:
         # Check if file exists
@@ -31,7 +32,7 @@ def load_config():
             config = yaml.safe_load(config_file)
             
         # Validate required parameters
-        required_params = ['faculty_weight', 'student_no_rank_penalty', 'faculty_no_rank_penalty', 'low_rank_penalty']
+        required_params = ['faculty_weight', 'student_no_rank_penalty', 'faculty_no_rank_penalty', 'low_rank_penalty', 'similarity_weight']
         for param in required_params:
             if param not in config:
                 print(f"Warning: Missing parameter '{param}' in config. Using default value.")
@@ -52,7 +53,11 @@ def load_config():
 
         if not 0 <= config['low_rank_penalty'] <= 0.2:
             print(f"Warning: low_rank_penalty must be between 0 and 0.2. Using default value.")
-            config['low_rank_penalty'] = 0.5
+            config['low_rank_penalty'] = 0.15
+
+        if not 0 <= config['similarity_weight'] <= 0.5:
+            print(f"Warning: similarity_weight must be between 0 and 0.5. Using default value.")
+            config['similarity_weight'] = 0.2
             
         return config
     
