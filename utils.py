@@ -1,30 +1,39 @@
-from algo_config import get_faculty_weight
 import pandas as pd
+from config import get_config_value, set_config_value
 
 import sys
 import pulp
 
 # -------------------------- START CONFIG -------------------------
 
-FACULTY_WEIGHT = get_faculty_weight()
+FACULTY_WEIGHT = get_config_value("faculty_weight")
+LOW_RANK_PENALTY = get_config_value("low_rank_penalty")
+NO_RANK_PENALTY = get_config_value("no_rank_penalty")
 
 # -------------------------- END CONFIG -------------------------
 
 # ---------------------------- START PREPROCESSING FUNCTIONS ----------------
 
 # Probability calculation function for each match
-def calculate_probability(student_rank, faculty_rank, faculty_weight):
-    # Calculate student rank score
-    student_rank_score = 1.0 - (student_rank - 1) * 0.15 if student_rank > 0 else 0
+def calculate_probability(student_rank, faculty_rank, method='normal'):
+    # Calculate student rank score    
+    student_rank_score = 1.0 - (student_rank - 1) * LOW_RANK_PENALTY if student_rank > 0 else 0
     
     # Calculate faculty rank score
-    faculty_rank_score = 1.0 - (faculty_rank - 1) * 0.15 if faculty_rank > 0 else 0
+    faculty_rank_score = 1.0 - (faculty_rank - 1) * LOW_RANK_PENALTY if faculty_rank > 0 else 0
     
     # Combine scores (weighted average)
-    return (faculty_rank_score * faculty_weight) + (student_rank_score * (1 - faculty_weight))
+    # Apply a penalty factor if either party didn't rank the other
+    if student_rank <= 0 or faculty_rank <= 0:
+        # Option 1: Use a multiplicative penalty
+        return NO_RANK_PENALTY * ((faculty_rank_score * FACULTY_WEIGHT) + 
+                                (student_rank_score * (1 - FACULTY_WEIGHT)))
+    else:
+        # Normal calculation for mutual rankings
+        return (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
 
 
-def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame, faculty_weight: float):
+def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.DataFrame):
     """
     Process the raw preference DataFrames into a comprehensive format for ILP matching.
     
@@ -112,8 +121,8 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
                 if ranked_student == student_name:
                     faculty_rank = i
                     break
-
-            match_probability = calculate_probability(student_rank, faculty_rank, faculty_weight)
+        
+            match_probability = calculate_probability(student_rank, faculty_rank)
             
             # Append pair information
             pairs.append({
@@ -128,8 +137,46 @@ def process_preferences(student_prefs_df: pd.DataFrame, faculty_prefs_df: pd.Dat
     
     return pd.DataFrame(pairs), faculty_slots
 
+def process_locks_exclusions(locking_df: pd.DataFrame):
+    """
+    Process a DataFrame with columns "Faculty Project", "Student Name", "Locked", "Excluded"
+    and extract lists of locks and exclusions.
+    
+    Args:
+        locking_df (pd.DataFrame): DataFrame with assignment data
+        
+    Returns:
+        Tuple containing:
+            - List of locks (tuples of (project, student))
+            - List of exclusions (tuples of (project, student))
+    """
+    # Validate column names
+    required_columns = ["Faculty Project", "Student Name", "Locked", "Excluded"]
+    if not all(col in locking_df.columns for col in required_columns):
+        missing = [col for col in required_columns if col not in locking_df.columns]
+        raise ValueError(f"Missing required columns: {', '.join(missing)}")
+    
+    # Check for rows with both Locked and Excluded as True
+    invalid_rows = locking_df[(locking_df["Locked"] == True) & (locking_df["Excluded"] == True)]
+    if not invalid_rows.empty:
+        conflicting_rows = invalid_rows[["Faculty Project", "Student Name"]].values.tolist()
+        raise ValueError(f"Found {len(invalid_rows)} rows with both Locked and Excluded as True: {conflicting_rows}")
+    
+    # Extract locks
+    locks = []
+    locked_rows = locking_df[locking_df["Locked"] == True]
+    for _, row in locked_rows.iterrows():
+        locks.append((row["Faculty Project"], row["Student Name"]))
+    
+    # Extract exclusions
+    exclusions = []
+    excluded_rows = locking_df[locking_df["Excluded"] == True]
+    for _, row in excluded_rows.iterrows():
+        exclusions.append((row["Faculty Project"], row["Student Name"]))
+    
+    return locks, exclusions
 
-def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict):
+def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict, locks: list = None):
     """
     Identify and assign mandatory matches where both student and faculty 
     have each other as their first choice.
@@ -160,9 +207,21 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict):
         match_row = group.iloc[0]
         
         # Conditions for a mandatory match:
-        # 1. Student rank is 1 (first choice)
-        # 2. Faculty rank is 1 (first choice)
-        if (match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1):
+        # 1. Student-Faculty Pairing in the Locked List
+        # OR
+        # 2a. Student rank is 1 (first choice)
+        # 2b. Faculty rank is 1 (first choice)
+        locked_pair = False
+        if locks and len(locks) > 0:
+            for (locked_faculty_project, locked_student) in locks:
+                if locked_faculty_project == faculty_project and locked_student == student:
+                    locked_pair = True
+                else:
+                    print(student, faculty_project, locked_student, locked_faculty_project)
+
+
+
+        if locked_pair or ((match_row['student_rank'] == 1) and (match_row['faculty_rank'] == 1)):
             # Verify there are still slots available for this project
             if updated_faculty_slots.get(faculty_project, 0) > 0:
                 # Add to mandatory matches
@@ -193,9 +252,7 @@ def assign_mandatory_matches(input_data: pd.DataFrame, faculty_slots: dict):
 
 # ---------------------------- END PREPROCESSING FUNCTIONS ----------------
 
-# ---------------------------- START ILP FUNCTIONS ------------------------
-
-def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict):
+def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict, exclusions: list = None):
     """
     Solves the faculty-student matching problem using two separate preference DataFrames.
     
@@ -255,6 +312,19 @@ def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict):
             <= num_openings,
             f"Faculty_Openings_{faculty_project}",
         )
+
+    # Add constraints for exclusions if provided
+    if exclusions and len(exclusions) > 0:
+        for i in range(len(pairs)):
+            faculty_project = pairs[i]["faculty_project"]
+            student_name = pairs[i]["student_name"]
+            
+            # If this pair is in the exclusions list, force its x variable to be 0
+            if (faculty_project, student_name) in exclusions:
+                problem += (
+                    x[i] == 0,
+                    f"Exclusion_{faculty_project}_{student_name}"
+                )
 
     # Solve the ILP problem
     problem.solve()

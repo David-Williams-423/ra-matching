@@ -22,10 +22,6 @@ Edit `algoconfig.py` to adjust matching behavior:
 ```python
 # Weight between faculty/student preferences (0-1)
 FACULTY_WEIGHT = 0.5  # 0 = student decides, 1 = faculty decides
-
-# Optimization penalties
-ILP_ALPHA = 3  # Student ranking mismatch penalty
-ILP_BETA = 1   # Faculty ranking mismatch penalty
 ```
 
 ### 2. Prepare Input Files

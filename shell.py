@@ -3,11 +3,15 @@
 import cmd
 import sys
 import pandas as pd
-from algo_config import get_faculty_weight, set_faculty_weight
 from utils import (
     process_preferences,
     assign_mandatory_matches,
     perform_ilp_matching,
+    process_locks_exclusions
+)
+from config import (
+    get_config_value,
+    set_config_value,
 )
 
 
@@ -16,38 +20,67 @@ class MatchingShell(cmd.Cmd):
 
     prompt = '(match)> '
 
-    def __init__(self, student_file, faculty_file):
+    def __init__(self, student_file, faculty_file, locking_file=None):
         """Initialize the shell with faculty and student data files."""
         super().__init__()
         self.faculty_file = faculty_file
         self.student_file = student_file
-        self.current_weight = get_faculty_weight()
+        self.locking_file = locking_file
+        self.current_weight = get_config_value('faculty_weight')
         self.original_faculty_slots = None
         self.load_initial_data()
 
     def load_initial_data(self):
         """Load initial data and perform initial matching."""
         try:
+            # Read CSV file into DataFrame
             self.df_student = pd.read_csv(self.student_file)
+        except FileNotFoundError:
+            print(f"Error: File '{self.student_file}' not found.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            sys.exit(1)  
+        try:
+            # Read CSV file into DataFrame
             self.df_faculty = pd.read_csv(self.faculty_file)
-            self.process_data()
-            print(
+        except FileNotFoundError:
+            print(f"Error: File '{self.faculty_file}' not found.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            sys.exit(1)
+        if (self.locking_file is not None):
+            try:
+                # Read CSV file into DataFrame
+                self.df_locking = pd.read_csv(self.locking_file)
+            except FileNotFoundError:
+                print(f"Error: File '{self.locking_file}' not found.")
+                sys.exit(1)
+            except Exception as e:
+                print(f"An error occurred: {str(e)}")
+                sys.exit(1)
+
+        self.process_data()
+        print(
                 f"Loaded {len(self.df_student)} students and "
                 f"{len(self.df_faculty)} faculty."
             )
-        except Exception as e:
-            print(f"Initialization failed: {str(e)}")
-            sys.exit(1)
 
     def process_data(self):
         """Re-run processing with current weights."""
-        input_data, faculty_slots = process_preferences(self.df_student, self.df_faculty, self.current_weight)
+        input_data, faculty_slots = process_preferences(self.df_student, self.df_faculty)
+        if self.locking_file is not None:
+            locks, exclusions = process_locks_exclusions(self.df_locking)
+        else:
+            locks = None
+            exclusions = None
         self.original_faculty_slots = faculty_slots.copy()
         
         input_data, self.mandatory_matches, updated_slots = assign_mandatory_matches(input_data, faculty_slots)
-        self.ilp_matches = perform_ilp_matching(input_data, updated_slots)
+        self.ilp_matches = perform_ilp_matching(input_data, updated_slots, exclusions)
         self.combined_matches = pd.concat([self.mandatory_matches, self.ilp_matches], ignore_index=True)
-        self.combined_matches.sort_values('probability_of_match', ascending=False, inplace=True)
+        self.combined_matches.sort_values('probability_of_match', ascending=False)
 
     def do_run_matching(self, arg):
         """Execute matching with the current configuration."""
@@ -69,7 +102,7 @@ class MatchingShell(cmd.Cmd):
             print("Make sure you input the files in the correct order: python main.py <student_file> <faculty_file>")
             return
     
-        set_faculty_weight(new_weight)
+        set_config_value('faculty_weight', new_weight)
         self.current_weight = new_weight
         print(f"\nWeights update - Faculty preference weight: {new_weight}")
         print(f"Run 'run_matching' to re-run the algorithm with new weights.")

@@ -1,0 +1,127 @@
+import yaml
+import os
+
+# Alpha is the penalty applied to the student's rankings for the faculty
+# The higher alpha is, the more faculty's preferences matter more than students'
+ILP_ALPHA = 3
+
+# Beta is the penalty applied to the faculty's rankings for the student
+# The higher beta is, the more students' preferences matter than faculty's
+ILP_BETA = 1
+
+CONFIG_PATH = 'config.yaml'
+
+
+def load_config():
+    """
+    Load algorithm configuration parameters from YAML file.
+    
+    Parameters:
+    config_path (str): Path to the YAML configuration file
+    
+    Returns:
+    dict: Configuration parameters
+    """
+    defaults = {
+                'faculty_weight': 0.5,
+                'no_rank_penalty': 0.5,
+                'low_rank_penalty': 0.15
+            }
+    try:
+        # Check if file exists
+        if not os.path.exists(CONFIG_PATH):
+            print(f"Warning: Configuration file '{CONFIG_PATH}' not found. Using default values.")
+            return defaults
+        
+        # Open and load the YAML file
+        with open(CONFIG_PATH, 'r') as config_file:
+            config = yaml.safe_load(config_file)
+            
+        # Validate required parameters
+        required_params = ['faculty_weight', 'no_rank_penalty', 'low_rank_penalty']
+        for param in required_params:
+            if param not in config:
+                print(f"Warning: Missing parameter '{param}' in config. Using default value.")
+                config[param] = 0.5
+                
+        # Validate parameter ranges
+        if not 0 <= config['faculty_weight'] <= 1:
+            print(f"Warning: faculty_weight must be between 0 and 1. Using default value.")
+            config['faculty_weight'] = 0.5
+            
+        if not 0 <= config['no_rank_penalty'] <= 1:
+            print(f"Warning: no_rank_penalty must be between 0 and 1. Using default value.")
+            config['no_rank_penalty'] = 0.5
+
+        if not 0 <= config['low_rank_penalty'] <= 0.2:
+            print(f"Warning: low_rank_penalty must be between 0 and 0.2. Using default value.")
+            config['low_rank_penalty'] = 0.5
+            
+        return config
+    
+    except Exception as e:
+        print(f"Error loading configuration file: {e}")
+        print("Using default configuration values.")
+        return defaults
+
+
+def save_config(config):
+    """
+    Save algorithm configuration parameters to YAML file.
+    
+    Parameters:
+    config (dict): Configuration parameters
+    """
+    try:
+        with open(CONFIG_PATH, 'w') as config_file:
+            yaml.dump(config, config_file)
+    except Exception as e:
+        print(f"Error saving configuration file: {e}")
+
+def get_config_value(key):
+    """
+    Get a specific configuration value.
+    
+    Parameters:
+    key (str): Configuration key
+    
+    Returns:
+    value: Configuration value
+    """
+    config = load_config()
+    return config.get(key, None)
+
+def set_config_value(key, value):
+    """
+    Set a specific configuration value.
+    
+    Parameters:
+    key (str): Configuration key
+    value: Configuration value
+    """
+    config = load_config()
+    config[key] = value
+    save_config(config)
+
+    
+def get_ilp_alpha():
+    """Get the ILP alpha value."""
+    return ILP_ALPHA
+
+def get_ilp_beta():
+    """Get the ILP beta value."""
+    return ILP_BETA
+
+def get_faculty_weight():
+    """Get the faculty weight for matching."""
+    config = load_config()
+    return config['faculty_weight']
+
+def set_faculty_weight(new_weight):
+    """Set the faculty weight for matching."""
+    config = load_config()
+    if not 0 <= new_weight <= 1:
+        raise ValueError("Weight must be between 0 and 1.")
+    config['faculty_weight'] = new_weight
+    with open('config.yaml', 'w') as config_file:
+        yaml.dump(config, config_file)
