@@ -1,5 +1,5 @@
 faculty_no_rank_penalty: 0.5
 faculty_weight: 0.7
 low_rank_penalty: 0.15
-similarity_weight: 0.5
+similarity_weight: 0.25
 student_no_rank_penalty: 0.5
