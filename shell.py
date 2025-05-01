@@ -3,6 +3,8 @@
 import cmd
 import sys
 import pandas as pd
+import shlex
+import argparse
 from utils import (
     process_preferences,
     assign_mandatory_matches,
@@ -10,6 +12,7 @@ from utils import (
     process_locks_exclusions
 )
 from config import (
+    get_config_value,
     set_config_value,
 )
 
@@ -199,6 +202,267 @@ class MatchingShell(cmd.Cmd):
         else:
             print("\nCurrent matches:")
             print(self.combined_matches.to_string(index=False))
+
+    def do_show_config(self, arg):
+        """Display current configuration.
+        Usage: show_config
+        """
+        print("\nCurrent configuration:")
+        print(f"Faculty weight: {get_config_value('faculty_weight')}")
+        print(f"Low rank penalty: {get_config_value('low_rank_penalty')}")
+        print(f"Student no rank penalty: {get_config_value('student_no_rank_penalty')}")
+        print(f"Faculty no rank penalty: {get_config_value('faculty_no_rank_penalty')}")
+        print(f"Similarity weight: {get_config_value('similarity_weight')}")
+
+    def do_change_similarity_weight(self, arg):
+        """Adjust similarity weight
+        Usage: change_similarity_weight [0-0.5] (e.g., change_similarity_weight 0.2)
+        """
+        if not arg:
+            print("Usage: change_similarity_weight [0-0.5] (e.g., change_similarity_weight 0.2)")
+            return
+        try:
+            new_weight = float(arg)
+            if not 0 <= new_weight <= 0.5:
+                raise ValueError("Weight must be between 0 and 0.5.")
+        except ValueError as e:
+            print(f"Invalid weight: {e}")
+            return
+    
+        set_config_value('similarity_weight', new_weight)
+        print(f"\nSimilarity weight updated to: {new_weight}")
+        print(f"Run 'run_matching' to re-run the algorithm with new weights.")
+
+
+    def do_show_locks_exclusions(self, arg):
+        """Display current locking file.
+        Usage: show_locks_exclusions
+        """
+        if self.locking_file is None:
+            print("No locking file provided.")
+            return
+        
+        try:
+            df_locking = pd.read_csv(self.locking_file)
+            print("\nCurrent locking file:")
+            print(df_locking.to_string(index=False))
+        except Exception as e:
+            print(f"Failed to read locking file: {e}")
+            return
+    
+    def do_lock(self, arg):
+        """Set locking file.
+        Usage: lock -f "Faculty Name" -p "Project Name" -s "Student Full Name" [-file filename]
+        """
+        if not arg:
+            print("Usage: lock -f \"Faculty Name\" -p \"Project Name\" -s \"Student Full Name\" [-file filename]")
+            return
+            
+        # Create parser for the command arguments
+        parser = argparse.ArgumentParser(description='Lock a student-faculty pairing')
+        parser.add_argument('-f', '--faculty', type=str, help='Faculty name', required=True)
+        parser.add_argument('-p', '--project', type=str, help='Project name', required=True)
+        parser.add_argument('-s', '--student', type=str, help='Student full name', required=True)
+        parser.add_argument('-file', type=str, help='Optional locking file name (same as exlcusion file)')
+        
+        try:
+            # Split the argument string while preserving quoted strings
+            args = parser.parse_args(shlex.split(arg))
+            
+            # Handle the optional locking file
+            if args.file:
+                self.locking_file = args.file
+                
+            if self.locking_file is None:
+                print("No locking file specified. Please provide a filename using -file option.")
+                return
+                
+            try:
+                self.df_locking = pd.read_csv(self.locking_file)
+            except FileNotFoundError:
+                # Create new DataFrame if file doesn't exist
+                self.df_locking = pd.DataFrame(columns=["Faculty Name", "Project", "Student Name", "Locked", "Excluded"])
+                
+            # Add new lock to the DataFrame
+            new_row = {
+                "Faculty Name": args.faculty,
+                "Project": args.project,
+                "Student Name": args.student,
+                "Locked": True,
+                "Excluded": False
+            }
+            
+            self.df_locking = pd.concat([self.df_locking, pd.DataFrame([new_row])], ignore_index=True)
+            self.df_locking.to_csv(self.locking_file, index=False)
+            print(f"Added lock: Faculty: '{args.faculty}', Project: '{args.project}', Student: '{args.student}'")
+            print("Run 'run_matching' to re-run the algorithm with new locks.")
+            
+        except argparse.ArgumentError as e:
+            print(f"Error parsing arguments: {str(e)}")
+        except SystemExit:
+            # Catch the system exit called by argparse when help is requested
+            pass
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+
+
+    def do_exclude(self, arg):
+        """Set locking file.
+        Usage: exclude -f "Faculty Name" -p "Project Name" -s "Student Full Name" [-file filename]
+        """
+        if not arg:
+            print("Usage: exclude -f \"Faculty Name\" -p \"Project Name\" -s \"Student Full Name\" [-file filename]")
+            return
+            
+        # Create parser for the command arguments
+        parser = argparse.ArgumentParser(description='Exclude a student-faculty pairing')
+        parser.add_argument('-f', '--faculty', type=str, help='Faculty name', required=True)
+        parser.add_argument('-p', '--project', type=str, help='Project name', required=True)
+        parser.add_argument('-s', '--student', type=str, help='Student full name', required=True)
+        parser.add_argument('-file', type=str, help='Optional exclusion file name (same as locking file)')
+        
+        try:
+            # Split the argument string while preserving quoted strings
+            args = parser.parse_args(shlex.split(arg))
+            
+            # Handle the optional locking file
+            if args.file:
+                self.locking_file = args.file
+                
+            if self.locking_file is None:
+                print("No exclude file specified. Please provide a filename using -file option.")
+                return
+                
+            try:
+                self.df_locking = pd.read_csv(self.locking_file)
+            except FileNotFoundError:
+                # Create new DataFrame if file doesn't exist
+                self.df_locking = pd.DataFrame(columns=["Faculty Name", "Project", "Student Name", "Locked", "Excluded"])
+                
+            # Add new lock to the DataFrame
+            new_row = {
+                "Faculty Name": args.faculty,
+                "Project": args.project,
+                "Student Name": args.student,
+                "Locked": False,
+                "Excluded": True
+            }
+            
+            self.df_locking = pd.concat([self.df_locking, pd.DataFrame([new_row])], ignore_index=True)
+            self.df_locking.to_csv(self.locking_file, index=False)
+            print(f"Added exclusion: Faculty: '{args.faculty}', Project: '{args.project}', Student: '{args.student}'")
+            print("Run 'run_matching' to re-run the algorithm with new exclusions.")
+            
+        except argparse.ArgumentError as e:
+            print(f"Error parsing arguments: {str(e)}")
+        except SystemExit:
+            # Catch the system exit called by argparse when help is requested
+            pass
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+
+
+    def do_remove_lock(self, arg):
+        """Remove a lock from the locking file.
+        Usage: remove_lock -f "Faculty Name" -p "Project Name" -s "Student Full Name" [-file filename]
+        """
+        if not arg:
+            print("Usage: remove_lock -f \"Faculty Name\" -p \"Project Name\" -s \"Student Full Name\" [-file filename]")
+            return
+            
+        # Create parser for the command arguments
+        parser = argparse.ArgumentParser(description='Remove a lock from the locking file')
+        parser.add_argument('-f', '--faculty', type=str, help='Faculty name', required=True)
+        parser.add_argument('-p', '--project', type=str, help='Project name', required=True)
+        parser.add_argument('-s', '--student', type=str, help='Student full name', required=True)
+        parser.add_argument('-file', type=str, help='Optional locking file name (same as exclusion file)')
+        
+        try:
+            # Split the argument string while preserving quoted strings
+            args = parser.parse_args(shlex.split(arg))
+            
+            # Handle the optional locking file
+            if args.file:
+                self.locking_file = args.file
+                
+            if self.locking_file is None:
+                print("No locking file specified. Please provide a filename using -file option.")
+                return
+                
+            try:
+                self.df_locking = pd.read_csv(self.locking_file)
+            except FileNotFoundError:
+                print(f"Error: File '{self.locking_file}' not found.")
+                return
+            
+            # Remove the lock from the DataFrame
+            self.df_locking = self.df_locking[~((self.df_locking['Faculty Name'] == args.faculty) &
+                                                (self.df_locking['Project'] == args.project) &
+                                                (self.df_locking['Student Name'] == args.student) &
+                                                (self.df_locking['Locked'] == True))]
+            
+            self.df_locking.to_csv(self.locking_file, index=False)
+            print(f"Removed lock: Faculty: '{args.faculty}', Project: '{args.project}', Student: '{args.student}'")
+            
+        except argparse.ArgumentError as e:
+            print(f"Error parsing arguments: {str(e)}")
+        except SystemExit:
+            # Catch the system exit called by argparse when help is requested
+            pass
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+
+
+    def do_remove_exclusion(self, arg):
+        """Remove an exclusion from the locking file.
+        Usage: remove_exclusion -f "Faculty Name" -p "Project Name" -s "Student Full Name" [-file filename]
+        """
+        if not arg:
+            print("Usage: remove_exclusion -f \"Faculty Name\" -p \"Project Name\" -s \"Student Full Name\" [-file filename]")
+            return
+            
+        # Create parser for the command arguments
+        parser = argparse.ArgumentParser(description='Remove an exclusion from the locking file')
+        parser.add_argument('-f', '--faculty', type=str, help='Faculty name', required=True)
+        parser.add_argument('-p', '--project', type=str, help='Project name', required=True)
+        parser.add_argument('-s', '--student', type=str, help='Student full name', required=True)
+        parser.add_argument('-file', type=str, help='Optional exclusion file name (same as locking file)')
+        
+        try:
+            # Split the argument string while preserving quoted strings
+            args = parser.parse_args(shlex.split(arg))
+            
+            # Handle the optional locking file
+            if args.file:
+                self.locking_file = args.file
+                
+            if self.locking_file is None:
+                print("No exclude file specified. Please provide a filename using -file option.")
+                return
+                
+            try:
+                self.df_locking = pd.read_csv(self.locking_file)
+            except FileNotFoundError:
+                print(f"Error: File '{self.locking_file}' not found.")
+                return
+            
+            # Remove the exclusion from the DataFrame
+            self.df_locking = self.df_locking[~((self.df_locking['Faculty Name'] == args.faculty) &
+                                                (self.df_locking['Project'] == args.project) &
+                                                (self.df_locking['Student Name'] == args.student) &
+                                                (self.df_locking['Excluded'] == True))]
+            
+            self.df_locking.to_csv(self.locking_file, index=False)
+            print(f"Removed exclusion: Faculty: '{args.faculty}', Project: '{args.project}', Student: '{args.student}'")
+            
+        except argparse.ArgumentError as e:
+            print(f"Error parsing arguments: {str(e)}")
+        except SystemExit:
+            # Catch the system exit called by argparse when help is requested
+            pass
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+    
 
     def do_return_csv(self, arg):
         """Export current matches to CSV.

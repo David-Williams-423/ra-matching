@@ -10,6 +10,7 @@ FACULTY_WEIGHT = get_config_value("faculty_weight")
 LOW_RANK_PENALTY = get_config_value("low_rank_penalty")
 STUDENT_NO_RANK_PENALTY = get_config_value("student_no_rank_penalty")
 FACULTY_NO_RANK_PENALTY = get_config_value("faculty_no_rank_penalty")
+SIMILARITY_WEIGHT = get_config_value("similarity_weight")
 
 # -------------------------- END CONFIG -------------------------
 
@@ -156,7 +157,7 @@ def process_locks_exclusions(locking_df: pd.DataFrame):
             - List of exclusions (tuples of (project, student))
     """
     # Validate column names
-    required_columns = ["Faculty Project", "Student Name", "Locked", "Excluded"]
+    required_columns = ["Faculty Name", "Project", "Student Name", "Locked", "Excluded"]
     if not all(col in locking_df.columns for col in required_columns):
         missing = [col for col in required_columns if col not in locking_df.columns]
         raise ValueError(f"Missing required columns: {', '.join(missing)}")
@@ -171,13 +172,13 @@ def process_locks_exclusions(locking_df: pd.DataFrame):
     locks = []
     locked_rows = locking_df[locking_df["Locked"] == True]
     for _, row in locked_rows.iterrows():
-        locks.append((row["Faculty Project"], row["Student Name"]))
+        locks.append((f'{row["Faculty Name"]} - {row["Project"]}', row["Student Name"]))
     
     # Extract exclusions
     exclusions = []
     excluded_rows = locking_df[locking_df["Excluded"] == True]
     for _, row in excluded_rows.iterrows():
-        exclusions.append((row["Faculty Project"], row["Student Name"]))
+        exclusions.append((f'{row["Faculty Name"]} - {row["Project"]}', row["Student Name"]))
     
     return locks, exclusions
 
