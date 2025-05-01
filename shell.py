@@ -89,9 +89,9 @@ class MatchingShell(cmd.Cmd):
         print(f"Generated {len(self.ilp_matches)} matches.")
         print("Use 'show_matches' to view the results.")
 
-    def do_change_weights(self, arg):
+    def do_change_faculty_weight(self, arg):
         """Adjust faculty/student preference weighting
-        Usage: change_weights [0-1] (e.g., change_weights 0.5)
+        Usage: change_faculty_weight [0-1] (e.g., change_faculty_weight 0.5)
         """
         try:
             new_weight = float(arg)
@@ -106,6 +106,54 @@ class MatchingShell(cmd.Cmd):
         self.current_weight = new_weight
         print(f"\nWeights update - Faculty preference weight: {new_weight}")
         print(f"Run 'run_matching' to re-run the algorithm with new weights.")
+
+    def do_change_low_rank_penalty(self, arg):
+        """Adjust low rank penalty
+        Usage: change_low_rank_penalty [0-1] (e.g., change_low_rank_penalty 0.5)
+        """
+        try:
+            new_penalty = float(arg)
+            if not 0 <= new_penalty <= 1:
+                raise ValueError("Penalty must be between 0 and 1.")
+        except ValueError as e:
+            print(f"Invalid penalty: {e}")
+            return
+    
+        set_config_value('low_rank_penalty', new_penalty)
+        print(f"\nLow rank penalty updated to: {new_penalty}")
+        print(f"Run 'run_matching' to re-run the algorithm with new penalties.")
+
+    def do_change_student_no_rank_penalty(self, arg):
+        """Adjust student no rank penalty
+        Usage: change_student_no_rank_penalty [0-1] (e.g., change_student_no_rank_penalty 0.5)
+        """
+        try:
+            new_penalty = float(arg)
+            if not 0 <= new_penalty <= 1:
+                raise ValueError("Penalty must be between 0 and 1.")
+        except ValueError as e:
+            print(f"Invalid penalty: {e}")
+            return
+    
+        set_config_value('no_rank_penalty', new_penalty)
+        print(f"\nStudent no rank penalty updated to: {new_penalty}")
+        print(f"Run 'run_matching' to re-run the algorithm with new penalties.")
+
+    def do_change_faculty_no_rank_penalty(self, arg):
+        """Adjust faculty no rank penalty
+        Usage: change_faculty_no_rank_penalty [0-1] (e.g., change_faculty_no_rank_penalty 0.5)
+        """
+        try:
+            new_penalty = float(arg)
+            if not 0 <= new_penalty <= 1:
+                raise ValueError("Penalty must be between 0 and 1.")
+        except ValueError as e:
+            print(f"Invalid penalty: {e}")
+            return
+    
+        set_config_value('faculty_no_rank_penalty', new_penalty)
+        print(f"\nFaculty no rank penalty updated to: {new_penalty}")
+        print(f"Run 'run_matching' to re-run the algorithm with new penalties.")
 
     def do_show_matches(self, arg):
         """Display current matches.

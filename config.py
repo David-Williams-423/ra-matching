@@ -24,7 +24,8 @@ def load_config():
     """
     defaults = {
                 'faculty_weight': 0.5,
-                'no_rank_penalty': 0.5,
+                'student_no_rank_penalty': 0.5,
+                'faculty_no_rank_penalty': 0.5,
                 'low_rank_penalty': 0.15
             }
     try:
@@ -38,7 +39,7 @@ def load_config():
             config = yaml.safe_load(config_file)
             
         # Validate required parameters
-        required_params = ['faculty_weight', 'no_rank_penalty', 'low_rank_penalty']
+        required_params = ['faculty_weight', 'student_no_rank_penalty', 'faculty_no_rank_penalty', 'low_rank_penalty']
         for param in required_params:
             if param not in config:
                 print(f"Warning: Missing parameter '{param}' in config. Using default value.")
@@ -49,9 +50,13 @@ def load_config():
             print(f"Warning: faculty_weight must be between 0 and 1. Using default value.")
             config['faculty_weight'] = 0.5
             
-        if not 0 <= config['no_rank_penalty'] <= 1:
-            print(f"Warning: no_rank_penalty must be between 0 and 1. Using default value.")
-            config['no_rank_penalty'] = 0.5
+        if not 0 <= config['student_no_rank_penalty'] <= 1:
+            print(f"Warning: student_no_rank_penalty must be between 0 and 1. Using default value.")
+            config['student_no_rank_penalty'] = 0.5
+
+        if not 0 <= config['faculty_no_rank_penalty'] <= 1:
+            print(f"Warning: faculty_no_rank_penalty must be between 0 and 1. Using default value.")
+            config['faculty_no_rank_penalty'] = 0.5
 
         if not 0 <= config['low_rank_penalty'] <= 0.2:
             print(f"Warning: low_rank_penalty must be between 0 and 0.2. Using default value.")
@@ -103,7 +108,7 @@ def set_config_value(key, value):
     config[key] = value
     save_config(config)
 
-    
+
 def get_ilp_alpha():
     """Get the ILP alpha value."""
     return ILP_ALPHA

@@ -8,7 +8,8 @@ import pulp
 
 FACULTY_WEIGHT = get_config_value("faculty_weight")
 LOW_RANK_PENALTY = get_config_value("low_rank_penalty")
-NO_RANK_PENALTY = get_config_value("no_rank_penalty")
+STUDENT_NO_RANK_PENALTY = get_config_value("student_no_rank_penalty")
+FACULTY_NO_RANK_PENALTY = get_config_value("faculty_no_rank_penalty")
 
 # -------------------------- END CONFIG -------------------------
 
@@ -24,10 +25,14 @@ def calculate_probability(student_rank, faculty_rank, method='normal'):
     
     # Combine scores (weighted average)
     # Apply a penalty factor if either party didn't rank the other
-    if student_rank <= 0 or faculty_rank <= 0:
-        # Option 1: Use a multiplicative penalty
-        return NO_RANK_PENALTY * ((faculty_rank_score * FACULTY_WEIGHT) + 
-                                (student_rank_score * (1 - FACULTY_WEIGHT)))
+    if student_rank <= 0 and faculty_rank <= 0:
+        return 0.0
+    elif student_rank <= 0:
+        return STUDENT_NO_RANK_PENALTY * ((faculty_rank_score * FACULTY_WEIGHT) + 
+                                        (student_rank_score * (1 - FACULTY_WEIGHT)))
+    elif faculty_rank <= 0:
+        return FACULTY_NO_RANK_PENALTY * ((faculty_rank_score * FACULTY_WEIGHT) + 
+                                        (student_rank_score * (1 - FACULTY_WEIGHT)))
     else:
         # Normal calculation for mutual rankings
         return (faculty_rank_score * FACULTY_WEIGHT) + (student_rank_score * (1 - FACULTY_WEIGHT))
