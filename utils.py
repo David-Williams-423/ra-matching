@@ -12,12 +12,21 @@ STUDENT_NO_RANK_PENALTY = get_config_value("student_no_rank_penalty")
 FACULTY_NO_RANK_PENALTY = get_config_value("faculty_no_rank_penalty")
 SIMILARITY_WEIGHT = get_config_value("similarity_weight")
 
+def run_config():
+    global FACULTY_WEIGHT, LOW_RANK_PENALTY, STUDENT_NO_RANK_PENALTY, FACULTY_NO_RANK_PENALTY, SIMILARITY_WEIGHT
+    FACULTY_WEIGHT = get_config_value("faculty_weight")
+    LOW_RANK_PENALTY = get_config_value("low_rank_penalty")
+    STUDENT_NO_RANK_PENALTY = get_config_value("student_no_rank_penalty")
+    FACULTY_NO_RANK_PENALTY = get_config_value("faculty_no_rank_penalty")
+    SIMILARITY_WEIGHT = get_config_value("similarity_weight")
+
 # -------------------------- END CONFIG -------------------------
 
 # ---------------------------- START PREPROCESSING FUNCTIONS ----------------
 
 # Probability calculation function for each match
 def calculate_probability(student_rank, faculty_rank, method='normal'):
+    run_config()
     # Calculate student rank score    
     student_rank_score = 1.0 - (student_rank - 1) * LOW_RANK_PENALTY if student_rank > 0 else 0
     
@@ -274,6 +283,7 @@ def perform_ilp_matching(input_data: pd.DataFrame, faculty_slots: dict,
             - 'student_rank': The rank the student gave this faculty
             - 'faculty_rank': The rank the faculty gave this student
     """
+    run_config()
 
     # Convert the input DataFrame to a list of dictionaries for easier access
     pairs = input_data.to_dict("records")
